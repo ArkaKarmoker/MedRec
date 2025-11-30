@@ -1,0 +1,10 @@
+django
+python-decouple
+pandas
+torch
+faiss-cpu
+google-generativeai
+llama-index-core
+llama-index-llms-google-genai
+llama-index-embeddings-huggingface
+llama-index-vector-stores-faiss

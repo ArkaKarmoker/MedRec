@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MedRec: Medicine Recommendation Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <style>
+        :root {
+            --bg-primary: #202123;
+            --bg-secondary: #343541;
+            --bg-chat: #40414f;
+            --text-primary: #ffffff;
+            --text-secondary: #d1d5da;
+            --accent: #10a37f;
+            --border: #4d4d4f;
+            --bubble-user: #19c37d;
+            --bubble-bot: #444654;
+            --bubble-user-text: #ffffff; /* Default (dark theme) */
+            --header-height: 60px;
+            --input-height: 140px; /* Increased for two-line input */
+            --disclaimer-height: 30px;
+        }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-primary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 6px; /* REDUCED from 10px */
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            font-size: 0.85rem; /* Smaller base font */
+        }
+        .sidebar.closed {
+            transform: translateX(-100%);
+        }
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 3px;
+        }
+        .new-chat-btn {
+            background-color: var(--accent);
+            color: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 8px; /* REDUCED from 10px */
+            margin-bottom: 6px; /* REDUCED from 10px */
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            font-size: 0.85rem;
+        }
+        .new-chat-btn:hover {
+            background-color: #0e8c6a;
+        }
+        .chat-search {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 8px; /* REDUCED from 10px */
+            margin-bottom: 8px; /* REDUCED from 15px */
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            position: relative;
+            padding-left: 32px; /* Make space for icon */
+        }
+        .chat-search::placeholder {
+            color: var(--text-secondary);
+        }
+        .chat-search-icon {
+            position: absolute;
+            left: 10px;
+            top: 40%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .chat-item {
+            background-color: transparent;
+            color: var(--text-primary);
+            padding: 6px 8px; /* REDUCED from 10px */
+            border-radius: 6px;
+            margin-bottom: 3px; /* REDUCED from 5px */
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 0.85rem;
+        }
+        .chat-item:hover {
+            background-color: var(--bg-secondary);
+        }
+        .chat-item.active {
+            background-color: var(--bg-secondary);
+        }
+        .chat-item i {
+            margin-right: 6px; /* REDUCED from 10px */
+            font-size: 0.9rem;
+        }
+        .sidebar-footer {
+            border-top: 1px solid var(--border);
+            padding-top: 6px; /* REDUCED from 10px */
+            margin-top: 6px; /* REDUCED from 10px */
+        }
+        .sidebar-item {
+            padding: 6px 8px; /* REDUCED from 10px */
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+            transition: background-color 0.2s;
+            font-size: 0.85rem;
+        }
+        .sidebar-item:hover {
+            background-color: var(--bg-secondary);
+        }
+        .sidebar-item i {
+            margin-right: 6px; /* REDUCED from 10px */
+            font-size: 0.9rem;
+        }
+        .theme-toggle-btn {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px; /* REDUCED from 8px */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 0.9rem;
+        }
+        .theme-toggle-btn:hover {
+            background-color: #3e3f4b;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px; /* REDUCED from 10px */
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            font-size: 0.85rem;
+        }
+        .user-avatar {
+            width: 26px; /* REDUCED from 32px */
+            height: 26px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 8px; /* REDUCED from 10px */
+            font-size: 0.75rem;
+        }
+        .upgrade-btn {
+            background-color: var(--accent);
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 3px 8px; /* REDUCED from 5px 10px */
+            font-size: 0.75rem; /* REDUCED from 0.85rem */
+            margin-left: auto;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-chat);
+            width: 100%;
+            transition: margin-left 0.3s ease;
+            position: relative;
+        }
+        .main-content.full {
+            margin-left: 0 !important;
+        }
+        .chat-header {
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            z-index: 2;
+        }
+        .chat-header .logo {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .chat-header .share-btn {
+            position: absolute;
+            right: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .chat-header .sidebar-toggle {
+            position: absolute;
+            left: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.4rem;
+            display: none;
+        }
+        .chat-header .sidebar-toggle.show {
+            display: block;
+        }
+        .chat-history {
+            overflow-y: auto;
+            /* UPDATED: Match ChatGPT/Grok/DeepSeek padding (max-width centered, side padding) */
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding-left: max(16px, calc((100% - 900px)/2 + 16px));
+            padding-right: max(16px, calc((100% - 900px)/2 + 16px));
+            padding-top: calc(var(--header-height) + 24px);
+            padding-bottom: calc(var(--input-height) + var(--disclaimer-height) + 24px);
+            z-index: 1;
+        }
+        /* .chat-history { */
+            /* overflow-y: auto; */
+            /* UPDATED: Match ChatGPT/Grok/DeepSeek padding (max-width centered, side padding) */
+            /* padding: 24px 16px; */
+            /* max-width: 900px; */
+            /* margin: 0 auto; */
+            /* width: 100%; */
+            /* position: absolute; */
+            /* top: 0; */
+            /* left: 0; */
+            /* right: 0; */
+            /* bottom: 0; */
+            /* padding-top: calc(var(--header-height) + 24px); */
+            /* padding-bottom: calc(var(--input-height) + var(--disclaimer-height) + 24px); */
+            /* z-index: 1; */
+        /* } */
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-history::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 3px;
+        }
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .user-message {
+            justify-content: flex-end;
+        }
+        .bot-message {
+            justify-content: flex-start;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin: 0 10px;
+            flex-shrink: 0;
+        }
+        .user-avatar {
+            background-color: var(--bubble-user);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .bot-avatar {
+            background-color: var(--accent);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        /* UPDATED: Wrapper for bubble + footer */
+        .message-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+        .user-message .message-content-wrapper {
+            align-items: flex-end;
+        }
+        .bot-message .message-content-wrapper {
+            align-items: flex-start;
+        }
+        .message-bubble {
+            padding: 12px 18px;
+            border-radius: 12px;
+            max-width: 100%; /* Fills the wrapper */
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .user-bubble {
+            background-color: var(--bubble-user);
+            color: var(--bubble-user-text); /* Now controlled by CSS variable */
+            border-bottom-right-radius: 4px;
+        }
+        .bot-bubble {
+            background-color: var(--bubble-bot);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+        /* REMOVED: Old hover-based actions */
+        /*
+        .message-actions { ... }
+        .message:hover .message-actions { ... }
+        */
+        /* NEW: Footer for navigation and actions */
+        .message-footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 8px;
+            color: var(--text-secondary);
+        }
+        .message-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+        .action-btn:hover {
+            color: var(--text-primary);
+        }
+        .action-btn:disabled {
+            color: var(--border);
+            cursor: not-allowed;
+        }
+        /* NEW: Response navigation styles */
+        .response-nav {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 4px;
+            line-height: 1;
+        }
+        .nav-btn:hover {
+            color: var(--text-primary);
+        }
+        .nav-btn:disabled {
+            color: var(--border);
+            cursor: not-allowed;
+        }
+        .response-counter {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 25px; /* Prevents layout shift */
+            text-align: center;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .loading::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-secondary);
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* UPDATED: Input area now matches ChatGPT/Grok/DeepSeek layout */
+        .input-area {
+            border-top: none;
+            padding: 16px 16px 24px; /* Consistent with chat-history top/bottom */
+            display: flex;
+            justify-content: center;
+            position: absolute;
+            bottom: var(--disclaimer-height);
+            left: 0;
+            right: 0;
+            z-index: 2;
+            background: transparent;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .input-wrapper {
+            background-color: var(--bg-secondary);
+            border-radius: 30px;
+            padding: 12px 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+            max-width: 100%; /* Full width within container */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border);
+        }
+        .input-wrapper:focus-within {
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.4),
+                        0 12px 35px rgba(0, 0, 0, 0.35);
+            border-color: var(--accent);
+        }
+        .input-area textarea {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            resize: none;
+            min-height: 20px;
+            max-height: 240px;
+            overflow-y: auto;
+            outline: none;
+            padding: 0;
+            margin: 0;
+        }
+        .input-area textarea::placeholder {
+            color: var(--text-secondary);
+        }
+        .input-controls {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .dropdown.model-select {
+            margin-right: auto;
+        }
+        .input-icons {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+        .input-icon {
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.2s;
+        }
+        .input-icon:hover {
+            color: var(--text-primary);
+        }
+        .send-btn {
+            background-color: var(--accent);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 12px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .send-btn:hover {
+            background-color: #0e8c6a;
+            transform: scale(1.05);
+        }
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+        .disclaimer {
+            text-align: center;
+            background-color: var(--bg-chat);
+            font-size: 0.75rem;
+            margin-top: 10px;
+            opacity: 1;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 2;
+            padding-bottom: 10px;
+        }
+        .examples-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .example-btn {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            margin: 5px;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+        .example-btn:hover {
+            background-color: #3e3f4b;
+        }
+        /* Light Theme Variables (for toggle) */
+        .light-theme {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-chat: #ffffff;
+            --text-primary: #202123;
+            --text-secondary: #6c757d;
+            --accent: #10a37f;
+            --border: #dee2e6;
+            --bubble-user: #e2ffc7;
+            --bubble-bot: #f7f7f8;
+            --bubble-user-text: #202123; /* Dark text in light theme */
+        }
+        .light-theme .bot-bubble {
+            color: #202123;
+        }
+        .light-theme .input-wrapper {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        .light-theme .input-wrapper:focus-within {
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.3),
+                        0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+        /* Media Queries for Responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: -260px;
+                transition: left 0.3s ease;
+                z-index: 1000;
+                height: 100%;
+            }
+            .sidebar.open {
+                left: 0;
+            }
+            .main-content {
+                width: 100%;
+            }
+            .chat-header .sidebar-toggle {
+                display: block;
+            }
+            .chat-history {
+                padding: 20px 15px;
+            }
+            .input-area {
+                padding: 16px 15px 20px;
+            }
+            .input-wrapper {
+                max-width: 100%;
+                margin: 0;
+            }
+        }
+        @media (min-width: 769px) {
+            .sidebar.closed ~ .main-content {
+                margin-left: 0;
+            }
+            .sidebar.closed {
+                transform: translateX(-100%);
+            }
+            .main-content {
+                margin-left: 260px;
+            }
+        }
+        .model-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-left: auto;  /* Pushes it to the right */
+            white-space: nowrap;
+        }
+        .form-switch .form-check-input {
+            background-color: var(--bg-secondary); /* Off state */
+            border-color: var(--border);
+        }
+        .form-switch .form-check-input:checked {
+            background-color: var(--accent); /* On state, green like your accent */
+        }
+        .form-check-label {
+            color: var(--text-primary);
+            font-size: 0.85rem; /* Match sidebar font */
+        }
+    </style>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <div class="sidebar">
+            <button class="new-chat-btn"><i class="bi bi-plus-circle me-2"></i>New chat</button>
+            <div class="position-relative">
+                <input type="text" class="chat-search form-control" placeholder="Search chats...">
+                <i class="bi bi-search chat-search-icon"></i>
+            </div>
+            <div class="chat-list">
+                <div class="chat-item active"><i class="bi bi-chat-left-dots"></i>Medicine Recommendations</div>
+                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Side Effects Query</div>
+                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Dosage Instructions</div>
+                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Generic Names</div>
+                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Drug Interactions</div>
+            </div>
+            <div class="sidebar-footer">
+                <div class="sidebar-item"><i class="bi bi-gear"></i>Settings</div>
+                <div class="sidebar-item">
+                    <i class="bi bi-moon-stars"></i>Toggle Theme
+                    <span class="ms-auto">
+                        <button class="theme-toggle-btn" id="theme-toggle"><i class="bi bi-moon-stars"></i></button>
+                    </span>
+                </div>
+                <div class="sidebar-item"><i class="bi bi-question-circle"></i>Help</div>
+                <div class="sidebar-item" style="margin-top: 6px; cursor: pointer;" onclick="window.location.href='{% url 'logout' %}'">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </div>
+                <div class="user-profile">
+                    <div class="user-avatar">U</div>
+                    <span>User Name</span>
+                    <span class="upgrade-btn"><i class="bi bi-stars"></i> Upgrade</span>
+                </div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="chat-header">
+                <!-- Sidebar Toggle Button (Hamburger) -->
+                <span class="sidebar-toggle" id="sidebar-toggle-open"><i class="bi bi-list"></i></span>
+                <span class="sidebar-toggle show" id="sidebar-toggle-close" style="display: none;"><i class="bi bi-chevron-double-left"></i></span>
+                <div class="logo">M</div>
+                MedRec: Medicine Recommendation Chatbot
+                <span class="share-btn"><i class="bi bi-upload fs-5"></i> Share</span>
+            </div>
+            <div class="chat-history" id="chat-history">
+                <div class="message bot-message">
+                    <div class="avatar bot-avatar">M</div>
+                    <div class="message-content-wrapper">
+                        <div class="message-bubble bot-bubble">
+                            Hey there! I'm MedRec, your AI-powered medicine recommendation chatbot. I can help with indications, side effects, dosages, generic names, and more based on our dataset. Ask away or try an example below!
+                        </div>
+                        <div class="message-footer">
+                            <div class="response-nav" style="display: none;">
+                                <button class="nav-btn prev-response" disabled="" data-bs-toggle="tooltip" data-bs-placement="top" title="Previous response">&lt;</button>
+                                <span class="response-counter">1/1</span>
+                                <button class="nav-btn next-response" disabled="" data-bs-toggle="tooltip" data-bs-placement="top" title="Next response">&gt;</button>
+                            </div>
+                            <div class="message-actions">
+                                <button class="action-btn copy" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy response"><i class="bi bi-copy"></i></button>
+                                <button class="action-btn thumbs-up" data-bs-toggle="tooltip" data-bs-placement="top" title="Good response"><i class="bi bi-hand-thumbs-up"></i></button>
+                                <button class="action-btn thumbs-down" data-bs-toggle="tooltip" data-bs-placement="top" title="Bad response"><i class="bi bi-hand-thumbs-down"></i></button>
+                                <button class="action-btn regenerate" disabled="" style="cursor: not-allowed;" data-bs-toggle="tooltip" data-bs-placement="top" title="Regenerate response"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            </div>
+                            <span class="model-name ms-auto">Gemini 2.5 Flash</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="examples-container">
+                    <button class="example-btn" data-query="What is the generic name of Sergel?">Generic name of Sergel?</button>
+                    <button class="example-btn" data-query="What are the indications for 3 Bion 100 mg Tablet?">Indications for 3 Bion 100 mg?</button>
+                    <button class="example-btn" data-query="Side effects of 3-C 200 mg Capsule?">Side effects of 3-C 200 mg?</button>
+                    <button class="example-btn" data-query="Generic name of 3 Bion?">Generic name of 3 Bion?</button>
+                    <button class="example-btn" data-query="Dosage for Cefixime Trihydrate?">Dosage for Cefixime?</button>
+                    <button class="example-btn" data-query="What are common drug interactions for Aspirin?">Drug interactions for Aspirin?</button>
+                    <button class="example-btn" data-query="Side effects of Paracetamol?">Side effects of Paracetamol?</button>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="user-input" placeholder="Ask anything..."></textarea>
+                    <div class="input-controls">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="dualResponseToggle" checked>
+                            <label class="form-check-label" for="dualResponseToggle">Dual Response</label>
+                        </div>
+                        <div class="dropdown model-select ms-3">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="modelDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                gemini 2.5 flash
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="modelDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-2.5-flash">
+                                        gemini 2.5 flash
+                                        <small class="text-muted d-block">Quick response</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-2.5-pro">
+                                        gemini 2.5 pro
+                                        <small class="text-muted d-block">Think hard</small>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="input-icons">
+                            <span class="input-icon"><i class="bi bi-mic"></i></span>
+                            <span class="input-icon"><i class="bi bi-image"></i></span>
+                        </div>
+                        <button class="send-btn" id="send-btn"><i class="bi bi-arrow-up"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="disclaimer"><i class="bi bi-exclamation-triangle"></i> MedRec can make mistakes. Check important info.</div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // NEW: Helper function to update bot message view (for nav/regen)
+            function updateBotMessageView($botMessage) {
+                const responses = $botMessage.data('responses') || [];
+                const models = $botMessage.data('models') || [];
+                let currentIndex = $botMessage.data('currentIndex') || 0;
+                const total = responses.length;
+                // Ensure index is valid
+                if (currentIndex < 0) currentIndex = 0;
+                if (currentIndex >= total) currentIndex = total - 1;
+                $botMessage.data('currentIndex', currentIndex); // Re-set sanitized index
+                if (total > 0) {
+                    // Update bubble content
+                    const $bubble = $botMessage.find('.message-bubble');
+                    $bubble.html(responses[currentIndex]);
+                    // Highlight code blocks in the new content
+                    $bubble.find('pre code').each(function(i, block) {
+                        hljs.highlightElement(block);
+                    });
+                    // Update model name
+                    const $modelNameSpan = $botMessage.find('.model-name');
+                    $modelNameSpan.text(models[currentIndex] || 'Unknown Model');
+                }
+                // Update nav controls
+                const $nav = $botMessage.find('.response-nav');
+                $nav.find('.response-counter').text(`${currentIndex + 1}/${total}`);
+                $nav.find('.prev-response').prop('disabled', currentIndex === 0);
+                $nav.find('.next-response').prop('disabled', currentIndex >= total - 1);
+                $nav.toggle(total > 1); // Show nav if more than 1 response
+            }
+            // Function to append message
+            // UPDATED: To accept userQuery for regen context and build new HTML structure
+            function appendMessage(sender, text, userQuery = null, modelName = '') {
+                let parsedText;
+                if (sender === 'bot') {
+                    parsedText = marked.parse(text);
+                } else {
+                    parsedText = text; // User text is not parsed
+                }
+                const alignClass = sender === 'user' ? 'user-message' : 'bot-message';
+                const bubbleClass = sender === 'user' ? 'user-bubble' : 'bot-bubble';
+                const avatarClass = sender === 'user' ? 'user-avatar' : 'bot-avatar';
+                const avatarText = sender === 'user' ? 'U' : 'M';
+                const avatarPosition = sender === 'user' ? 'after' : 'before';
+                let msgHtml = `<div class="message ${alignClass}">`;
+                if (avatarPosition === 'before') {
+                    msgHtml += `<div class="avatar ${avatarClass}">${avatarText}</div>`;
+                }
+                // NEW: Wrapper for bubble and footer
+                msgHtml += `<div class="message-content-wrapper">`;
+                msgHtml += `<div class="message-bubble ${bubbleClass}">${parsedText}</div>`;
+                // NEW: Add footer only for bot messages
+                if (sender === 'bot') {
+                    msgHtml += `
+                    <div class="message-footer">
+                        <div class="response-nav" style="display: none;">
+                            <button class="nav-btn prev-response" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Previous response">&lt;</button>
+                            <span class="response-counter">1/1</span>
+                            <button class="nav-btn next-response" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Next response">&gt;</button>
+                        </div>
+                        <div class="message-actions">
+                            <button class="action-btn copy" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy response"><i class="bi bi-copy"></i></button>
+                            <button class="action-btn thumbs-up" data-bs-toggle="tooltip" data-bs-placement="top" title="Good response"><i class="bi bi-hand-thumbs-up"></i></button>
+                            <button class="action-btn thumbs-down" data-bs-toggle="tooltip" data-bs-placement="top" title="Bad response"><i class="bi bi-hand-thumbs-down"></i></button>
+                            <button class="action-btn regenerate" data-bs-toggle="tooltip" data-bs-placement="top" title="Regenerate response"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        </div>
+                        <span class="model-name ms-auto">${modelName}</span>
+                    </div>
+                    `;
+                }
+                if (sender === 'user') {
+                    msgHtml += `
+                    <div class="message-footer">
+                        <div class="message-actions">
+                            <button class="action-btn copy" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy question"><i class="bi bi-copy"></i></button>
+                        </div>
+                    </div>
+                    `;
+                }
+                msgHtml += `</div>`; // Close wrapper
+                if (avatarPosition === 'after') {
+                    msgHtml += `<div class="avatar ${avatarClass}">${avatarText}</div>`;
+                }
+                msgHtml += `</div>`;
+                const $msg = $(msgHtml); // Create jQuery object
+                // NEW: Store responses and query on the bot message element
+                if (sender === 'bot') {
+                    $msg.data('responses', [parsedText]); // Store as array
+                    $msg.data('models', [modelName]); // Store models as array
+                    $msg.data('currentIndex', 0);
+                    $msg.data('userQuery', userQuery); // Store the query that led to this
+                }
+                $('#chat-history').append($msg);
+                // Highlight code blocks
+                $msg.find('pre code').each(function(i, block) {
+                    hljs.highlightElement(block);
+                });
+                // Initialize tooltips in the new message
+                $msg.find('[data-bs-toggle="tooltip"]').each(function () {
+                    new bootstrap.Tooltip(this);
+                });
+                scrollToBottom();
+            }
+            // Show loading
+            function showLoading() {
+                const loadingHtml = `
+                    <div class="message bot-message loading" id="loading-indicator">
+                        <div class="avatar bot-avatar">M</div>
+                        <div class="message-bubble bot-bubble">Thinking...</div>
+                    </div>`;
+                $('#chat-history').append(loadingHtml);
+                scrollToBottom();
+            }
+            // Remove loading
+            function removeLoading() {
+                $('#loading-indicator').remove();
+            }
+            // Scroll to bottom
+            function scrollToBottom() {
+                const chatHistory = $('#chat-history');
+                chatHistory.scrollTop(chatHistory[0].scrollHeight);
+            }
+            // Auto-resize textarea
+            $('#user-input').on('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            // Send button click
+            $('#send-btn').click(function() {
+                let userQuery = $('#user-input').val().trim();
+                if (!userQuery) return;
+                appendMessage('user', userQuery);
+                $('#user-input').val('');
+                $('#user-input').css('height', 'auto');
+                showLoading();
+                // Real Gemini API Call via Django Backend
+                const selectedModel = $('#modelDropdown').data('selected-model') || 'gemini-2.5-flash';
+                $.ajax({
+                    url: '/api/chat/', // Your Django endpoint
+                    type: 'POST',
+                    data: JSON.stringify({ query: userQuery, model: selectedModel, dual_response: dualEnabled }),
+                    contentType: 'application/json',
+                    success: function(data) {
+                        setTimeout(() => {
+                            removeLoading();
+                            // UPDATED: Pass userQuery to appendMessage
+                            const modelName = data.model ? data.model.replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Unknown Model';
+                            appendMessage('bot', data.response, userQuery, modelName);
+                        }, 800); // Shorter delay since real API is fast
+                    },
+                    error: function(xhr) {
+                        setTimeout(() => {
+                            removeLoading();
+                            const errorMsg = xhr.responseJSON?.error || 'Sorry, something went wrong.';
+                            appendMessage('bot', errorMsg, userQuery); // Pass query even on error
+                        }, 800);
+                    }
+                });
+            });
+            // Enter key press
+            $('#user-input').keypress(function(e) {
+                if (e.which === 13 && !e.shiftKey) {
+                    e.preventDefault();
+                    $('#send-btn').click();
+                }
+            });
+            // NEW: Initialize the static welcome message with data
+            const $initialBotMessage = $('.bot-message').first();
+            if ($initialBotMessage.length) {
+                const $bubble = $initialBotMessage.find('.message-bubble');
+                const initialHtml = $bubble.html(); // Already HTML
+                const initialParsedText = marked.parse(initialHtml.trim()); // Re-parse to be safe
+                $bubble.html(initialParsedText); // Set parsed HTML
+                $initialBotMessage.data('responses', [initialParsedText]);
+                $initialBotMessage.data('models', ['Gemini 2.5 Flash']);
+                $initialBotMessage.data('currentIndex', 0);
+                $initialBotMessage.data('userQuery', null); // Welcome message has no query
+            }
+            const initialChatHTML = $('#chat-history').html();
+            // New Chat button
+            $('.new-chat-btn').click(function() {
+                const newChatItem = $('<div class="chat-item active"><i class="bi bi-chat-left-dots"></i>New Chat</div>');
+                $('.chat-item').removeClass('active');
+                $('.chat-list').prepend(newChatItem);
+                $('#chat-history').html(initialChatHTML);
+                // NEW: Re-initialize the welcome message data
+                const $welcomeMsg = $('.bot-message').first();
+                if ($welcomeMsg.length) {
+                    const initialParsedText = $welcomeMsg.data('responses') ? $welcomeMsg.data('responses')[0] : marked.parse($welcomeMsg.find('.message-bubble').text().trim());
+                    $welcomeMsg.data('responses', [initialParsedText]);
+                    $welcomeMsg.data('models', ['Gemini 2.5 Flash']);
+                    $welcomeMsg.data('currentIndex', 0);
+                    $welcomeMsg.data('userQuery', null);
+                }
+                scrollToBottom();
+            });
+            // Example buttons
+            $(document).on('click', '.example-btn', function() {
+                const query = $(this).data('query');
+                $('#user-input').val(query);
+                $('#send-btn').click();
+            });
+            // Theme toggle
+            $('#theme-toggle').click(function() {
+                if ($('body').hasClass('dark-theme')) {
+                    $('body').removeClass('dark-theme').addClass('light-theme');
+                    $(this).html('<i class="bi bi-sun"></i>');
+                } else {
+                    $('body').removeClass('light-theme').addClass('dark-theme');
+                    $(this).html('<i class="bi bi-moon-stars"></i>');
+                }
+            });
+            // === SIDEBAR TOGGLE FUNCTIONALITY (Desktop & Mobile) ===
+            const $sidebar = $('.sidebar');
+            const $mainContent = $('.main-content');
+            const $openBtn = $('#sidebar-toggle-open');
+            const $closeBtn = $('#sidebar-toggle-close');
+            function openSidebar() {
+                $sidebar.removeClass('closed');
+                $closeBtn.show();
+                $openBtn.hide();
+                if ($(window).width() > 768) {
+                    $mainContent.css('margin-left', '260px');
+                } else {
+                    $sidebar.addClass('open');
+                }
+            }
+            function closeSidebar() {
+                $sidebar.addClass('closed');
+                $openBtn.show();
+                $closeBtn.hide();
+                if ($(window).width() > 768) {
+                    $mainContent.css('margin-left', '0');
+                } else {
+                    $sidebar.removeClass('open');
+                }
+            }
+            $openBtn.on('click', openSidebar);
+            $closeBtn.on('click', closeSidebar);
+            // Initialize state
+            if ($(window).width() <= 768) {
+                closeSidebar(); // Mobile: start closed
+            } else {
+                openSidebar(); // Desktop: start open
+            }
+            // Handle window resize
+            $(window).on('resize', function() {
+                if ($(window).width() <= 768) {
+                    if (!$sidebar.hasClass('closed')) {
+                        closeSidebar();
+                    }
+                } else {
+                    if ($sidebar.hasClass('closed')) {
+                        openSidebar();
+                    }
+                }
+            });
+            // Chat item click (simulate loading new chat)
+            $(document).on('click', '.chat-item', function() {
+                $('.chat-item').removeClass('active');
+                $(this).addClass('active');
+                $('#chat-history').html('<div class="message bot-message"><div class="avatar bot-avatar">M</div><div class="message-bubble bot-bubble">Loading chat...</div></div>');
+                setTimeout(() => {
+                    $('#chat-history').html(`
+                        <div class="message bot-message">
+                            <div class="avatar bot-avatar">M</div>
+                            <div class="message-content-wrapper">
+                                <div class="message-bubble bot-bubble">This is a demo chat loaded from history!</div>
+                                <div class="message-footer">
+                                    </div>
+                            </div>
+                        </div>
+                    `);
+                    scrollToBottom();
+                }, 1000);
+            });
+            // Action buttons functionality (demo alerts)
+            $(document).on('click', '.thumbs-up', function() {
+                alert('Thanks for the feedback!');
+            });
+            $(document).on('click', '.thumbs-down', function() {
+                alert('Sorry, we will improve!');
+            });
+            // UPDATED: Functional regenerate button
+            $(document).on('click', '.regenerate', function() {
+                const $btn = $(this);
+                const $botMessage = $btn.closest('.message.bot-message');
+                const userQuery = $botMessage.data('userQuery');
+                if (!userQuery) {
+                    alert('Cannot regenerate this message.');
+                    return;
+                }
+                const $bubble = $botMessage.find('.message-bubble');
+                const $footer = $botMessage.find('.message-footer');
+                const originalBubbleHtml = $bubble.html();
+                // Show inline loading
+                $bubble.html('Thinking...');
+                $btn.prop('disabled', true);
+                // Real Gemini API Call via Django Backend
+                const selectedModel = $('#modelDropdown').data('selected-model') || 'gemini-2.5-flash';
+                $.ajax({
+                    url: '/api/chat/', // Your Django endpoint
+                    type: 'POST',
+                    data: JSON.stringify({ query: userQuery, model: selectedModel, dual_response: dualEnabled }),
+                    contentType: 'application/json',
+                    success: function(data) {
+                        const newResponseText = data.response;
+                        const newParsedText = marked.parse(newResponseText);
+                        const responses = $botMessage.data('responses');
+                        responses.push(newParsedText); // Add new response
+                        $botMessage.data('responses', responses);
+                        const models = $botMessage.data('models');
+                        const modelName = data.model ? data.model.replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Unknown Model';
+                        models.push(modelName); // Add new model
+                        $botMessage.data('models', models);
+                        $botMessage.data('currentIndex', responses.length - 1); // Set to new response
+                        updateBotMessageView($botMessage); // Update view
+                    },
+                    error: function(xhr) {
+                        $bubble.html(originalBubbleHtml); // Restore on error
+                        alert('Sorry, something went wrong during regeneration.');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false); // Re-enable button
+                    }
+                });
+            });
+            // NEW: Previous response button
+            $(document).on('click', '.prev-response', function() {
+                const $botMessage = $(this).closest('.message.bot-message');
+                let currentIndex = $botMessage.data('currentIndex');
+                $botMessage.data('currentIndex', --currentIndex);
+                updateBotMessageView($botMessage);
+            });
+            // NEW: Next response button
+            $(document).on('click', '.next-response', function() {
+                const $botMessage = $(this).closest('.message.bot-message');
+                let currentIndex = $botMessage.data('currentIndex');
+                $botMessage.data('currentIndex', ++currentIndex);
+                updateBotMessageView($botMessage);
+            });
+            $(document).on('click', '.copy', function() {
+                // Find the visible text in the bubble
+                const text = $(this).closest('.message-content-wrapper').find('.message-bubble').text();
+                navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+            });
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            // Initial scroll
+            scrollToBottom();
+            // NEW: Model selection handling
+            $(document).on('click', '.dropdown-item', function(e) {
+                e.preventDefault();
+                const selectedText = $(this).clone().children().remove().end().text().trim(); // Get text without small
+                const selectedValue = $(this).data('value');
+                $('#modelDropdown').text(selectedText);
+                $('#modelDropdown').data('selected-model', selectedValue);
+            });
+            // Voice input feature
+            const micIcon = $('.input-icons .bi-mic').parent();
+            let isRecording = false;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                let finalTranscript = '';
+                recognition.onstart = () => {
+                    isRecording = true;
+                    micIcon.find('i').removeClass('bi-mic').addClass('bi-mic-fill');
+                };
+                recognition.onend = () => {
+                    isRecording = false;
+                    micIcon.find('i').removeClass('bi-mic-fill').addClass('bi-mic');
+                    if (finalTranscript.trim()) {
+                        $('#send-btn').click();
+                    }
+                    finalTranscript = '';
+                };
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    $('#user-input').val(finalTranscript + interimTranscript);
+                    $('#user-input').trigger('input');
+                };
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    if (event.error === 'no-speech') {
+                        // Ignore no-speech error silently
+                    } else {
+                        alert('Speech recognition error: ' + event.error);
+                    }
+                };
+                micIcon.click(() => {
+                    if (isRecording) {
+                        recognition.stop();
+                    } else {
+                        finalTranscript = '';
+                        recognition.start();
+                    }
+                });
+            } else {
+                micIcon.click(() => {
+                    alert('Speech recognition not supported in this browser.');
+                });
+            }
+            let dualEnabled = $('#dualResponseToggle').is(':checked');
+            $('#dualResponseToggle').change(function() {
+                dualEnabled = $(this).is(':checked');
+            });
+        });
+    </script>
+</body>
+</html>
