@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,19 +11,29 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
     <style>
         :root {
-            --bg-primary: #202123;
-            --bg-secondary: #343541;
-            --bg-chat: #40414f;
+            --bg-primary: #000000;
+            --bg-secondary: #171717;
+            --bg-chat: #000000;
             --text-primary: #ffffff;
             --text-secondary: #d1d5da;
             --accent: #10a37f;
-            --border: #4d4d4f;
+            --border: #333333;
             --bubble-user: #19c37d;
-            --bubble-bot: #444654;
+            --bubble-bot: #0a0a0a;
             --bubble-user-text: #ffffff; /* Default (dark theme) */
-            --header-height: 60px;
-            --input-height: 140px; /* Increased for two-line input */
+            --bg-input: #0a0a0a;
+            --header-height: 48px;
+            --input-height: 105px; /* Reduced to decrease gap below last message */
             --disclaimer-height: 30px;
+            /* Dropdown specifics */
+            --dropdown-bg: #000000;
+            --dropdown-hover: #171717;
+            /* Modal Specifics */
+            --modal-bg: #000000;
+            --modal-sidebar-bg: #171717;
+            --danger-color: #f56c6c;
+            /* Theme Selection Active Color (Dark Mode Default) */
+            --theme-selection-bg: #171717;
         }
         body {
             background-color: var(--bg-primary);
@@ -39,6 +50,9 @@
             width: 100%;
             height: 100%;
             position: relative;
+        }
+        .sidebar-overlay {
+            display: none;
         }
         .sidebar {
             width: 260px;
@@ -66,9 +80,54 @@
             background-color: var(--border);
             border-radius: 3px;
         }
-        .new-chat-btn {
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 8px 8px;
+            margin-bottom: 16px;
+        }
+        .sidebar-brand .brand-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
             background-color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
             color: #ffffff;
+            flex-shrink: 0;
+        }
+        .sidebar-brand .brand-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+        .sidebar-brand .brand-subtitle {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        .sidebar-close-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-left: auto;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .sidebar-close-btn:hover {
+            color: var(--text-primary);
+        }
+        .new-chat-btn {
+            background-color: transparent;
+            color: var(--text-primary);
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 6px 8px; /* REDUCED from 10px */
@@ -77,11 +136,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.2s;
             font-size: 0.85rem;
         }
         .new-chat-btn:hover {
-            background-color: #0e8c6a;
+            background-color: var(--bg-secondary);
         }
         .chat-search {
             background-color: var(--bg-secondary);
@@ -93,6 +152,13 @@
             font-size: 0.85rem;
             position: relative;
             padding-left: 32px; /* Make space for icon */
+        }
+        .chat-search:focus {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.2rem rgba(16, 163, 127, 0.25);
+            outline: 0;
         }
         .chat-search::placeholder {
             color: var(--text-secondary);
@@ -110,6 +176,7 @@
             flex: 1;
             overflow-y: auto;
         }
+        /* UPDATED: Chat Item styling for 3-dots support */
         .chat-item {
             background-color: transparent;
             color: var(--text-primary);
@@ -118,9 +185,12 @@
             margin-bottom: 3px; /* REDUCED from 5px */
             display: flex;
             align-items: center;
+            justify-content: space-between; /* Space between text and dots */
             cursor: pointer;
             transition: background-color 0.2s;
             font-size: 0.85rem;
+            position: relative; /* Context for dropdown */
+            height: 36px; /* Fixed height for consistency */
         }
         .chat-item:hover {
             background-color: var(--bg-secondary);
@@ -128,10 +198,65 @@
         .chat-item.active {
             background-color: var(--bg-secondary);
         }
-        .chat-item i {
+        /* New wrapper for text to handle truncation */
+        .chat-text {
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+            margin-right: 5px;
+        }
+        .chat-text i {
             margin-right: 6px; /* REDUCED from 10px */
             font-size: 0.9rem;
+            flex-shrink: 0;
         }
+        /* 3-Dots Menu styling */
+        .chat-options {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1; /* Always visible */
+        }
+        .chat-options-btn {
+            color: var(--text-secondary);
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+        .chat-options-btn:hover {
+            color: var(--text-primary);
+            background-color: rgba(255,255,255,0.1);
+        }
+        /* Custom Dropdown for Chat Options to match theme */
+        .dropdown-menu-custom {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            min-width: 140px;
+            z-index: 9999;
+        }
+        .dropdown-menu-custom .dropdown-item {
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dropdown-menu-custom .dropdown-item:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .dropdown-menu-custom .dropdown-divider {
+            border-top-color: var(--border);
+            margin: 4px 0;
+        }
+        .dropdown-menu-custom .dropdown-item.text-danger:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
         .sidebar-footer {
             border-top: 1px solid var(--border);
             padding-top: 6px; /* REDUCED from 10px */
@@ -145,6 +270,7 @@
             color: var(--text-primary);
             transition: background-color 0.2s;
             font-size: 0.85rem;
+            cursor: pointer;
         }
         .sidebar-item:hover {
             background-color: var(--bg-secondary);
@@ -210,9 +336,9 @@
             margin-left: 0 !important;
         }
         .chat-header {
-            background-color: var(--bg-primary);
-            border-bottom: 1px solid var(--border);
-            padding: 15px 20px;
+            background-color: var(--bg-chat);
+            border-bottom: none;
+            padding: 8px 20px;
             text-align: center;
             font-size: 1.1rem;
             font-weight: 500;
@@ -226,18 +352,14 @@
             height: var(--header-height);
             z-index: 2;
         }
-        .chat-header .logo {
-            width: 24px;
-            height: 24px;
-            margin-right: 8px;
-            border-radius: 50%;
-            background-color: var(--accent);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #ffffff;
+        .chat-header .header-title {
+            font-size: 1rem;
+            font-weight: 500;
+            max-width: 50%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-primary);
         }
         .chat-header .share-btn {
             position: absolute;
@@ -271,22 +393,6 @@
             padding-bottom: calc(var(--input-height) + var(--disclaimer-height) + 24px);
             z-index: 1;
         }
-        /* .chat-history { */
-            /* overflow-y: auto; */
-            /* UPDATED: Match ChatGPT/Grok/DeepSeek padding (max-width centered, side padding) */
-            /* padding: 24px 16px; */
-            /* max-width: 900px; */
-            /* margin: 0 auto; */
-            /* width: 100%; */
-            /* position: absolute; */
-            /* top: 0; */
-            /* left: 0; */
-            /* right: 0; */
-            /* bottom: 0; */
-            /* padding-top: calc(var(--header-height) + 24px); */
-            /* padding-bottom: calc(var(--input-height) + var(--disclaimer-height) + 24px); */
-            /* z-index: 1; */
-        /* } */
         .chat-history::-webkit-scrollbar {
             width: 6px;
         }
@@ -358,11 +464,6 @@
             color: var(--text-primary);
             border-bottom-left-radius: 4px;
         }
-        /* REMOVED: Old hover-based actions */
-        /*
-        .message-actions { ... }
-        .message:hover .message-actions { ... }
-        */
         /* NEW: Footer for navigation and actions */
         .message-footer {
             display: flex;
@@ -441,7 +542,7 @@
         /* UPDATED: Input area now matches ChatGPT/Grok/DeepSeek layout */
         .input-area {
             border-top: none;
-            padding: 16px 16px 24px; /* Consistent with chat-history top/bottom */
+            padding: 16px 16px 8px; /* Reduced bottom padding to lower it */
             display: flex;
             justify-content: center;
             position: absolute;
@@ -455,7 +556,7 @@
             width: 100%;
         }
         .input-wrapper {
-            background-color: var(--bg-secondary);
+            background-color: var(--bg-input);
             border-radius: 30px;
             padding: 12px 18px;
             display: flex;
@@ -491,7 +592,7 @@
         .input-controls {
             display: flex;
             align-items: center;
-            margin-top: 8px;
+            margin-top: -8px;
         }
         .dropdown.model-select {
             margin-right: auto;
@@ -572,6 +673,13 @@
             --bubble-user: #e2ffc7;
             --bubble-bot: #f7f7f8;
             --bubble-user-text: #202123; /* Dark text in light theme */
+            --bg-input: #ffffff;
+            --dropdown-bg: #ffffff;
+            --dropdown-hover: #f0f2f5;
+            --modal-bg: #ffffff;
+            --modal-sidebar-bg: #f8f9fa;
+            /* Theme Selection Active Color (Light Mode) */
+            --theme-selection-bg: #e9ecef;
         }
         .light-theme .bot-bubble {
             color: #202123;
@@ -585,33 +693,296 @@
         }
         /* Media Queries for Responsiveness */
         @media (max-width: 768px) {
+            /* === SIDEBAR === */
             .sidebar {
-                position: absolute;
-                left: -260px;
-                transition: left 0.3s ease;
-                z-index: 1000;
+                position: fixed;
+                left: -280px;
+                top: 0;
+                width: 280px;
                 height: 100%;
+                transition: left 0.3s ease;
+                z-index: 1100;
+                box-shadow: none;
             }
             .sidebar.open {
                 left: 0;
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
             }
-            .main-content {
+
+            /* Overlay behind sidebar */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
                 width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1050;
+            }
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            /* === MAIN CONTENT === */
+            .main-content {
+                width: 100% !important;
+                margin-left: 0 !important;
+            }
+
+            /* === HEADER === */
+            .chat-header {
+                padding: 8px 12px;
             }
             .chat-header .sidebar-toggle {
                 display: block;
+                position: absolute;
+                left: 12px;
             }
+            .chat-header .header-title {
+                font-size: 0.85rem;
+                max-width: 55%;
+            }
+            .chat-header .share-btn {
+                right: 12px;
+                font-size: 0.85rem;
+            }
+
+            /* === CHAT HISTORY === */
             .chat-history {
-                padding: 20px 15px;
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                padding-top: calc(var(--header-height) + 12px) !important;
+                padding-bottom: calc(var(--input-height) + var(--disclaimer-height) + 12px) !important;
             }
+
+            /* === MESSAGES === */
+            .message-content-wrapper {
+                max-width: 90% !important;
+            }
+            .avatar {
+                width: 28px;
+                height: 28px;
+                margin: 0 6px;
+                font-size: 0.7rem;
+            }
+            .message-bubble {
+                padding: 10px 14px;
+                font-size: 0.88rem;
+            }
+            .message-footer {
+                gap: 6px;
+                padding: 3px 4px;
+            }
+            .action-btn {
+                font-size: 0.85rem;
+            }
+            .model-name {
+                font-size: 0.65rem;
+            }
+
+            /* === INPUT AREA === */
             .input-area {
-                padding: 16px 15px 20px;
+                padding: 8px 10px 12px;
             }
             .input-wrapper {
                 max-width: 100%;
                 margin: 0;
+                padding: 10px 14px;
+                border-radius: 24px;
+            }
+            .input-area textarea {
+                font-size: 0.88rem;
+            }
+            .input-controls {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .form-check-label {
+                font-size: 0.75rem;
+            }
+            #modelDropdown {
+                font-size: 0.7rem !important;
+                padding: 2px 10px !important;
+            }
+            .input-icons {
+                gap: 6px;
+            }
+            .input-icon {
+                font-size: 1rem;
+            }
+            .send-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 0.85rem;
+            }
+
+            /* === WELCOME SCREEN === */
+            #welcome-message {
+                font-size: 1.1rem !important;
+            }
+            .examples-container {
+                margin: 10px 0;
+            }
+            .example-btn {
+                font-size: 0.75rem;
+                padding: 6px 12px;
+                margin: 3px;
+            }
+
+            /* === SETTINGS MODAL (DeepSeek Bottom Sheet) === */
+            .settings-modal .modal-dialog {
+                margin: 0;
+                max-width: 100%;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                transform: none;
+            }
+            .settings-modal .modal-dialog.modal-dialog-centered {
+                align-items: flex-end;
+                min-height: 100%;
+            }
+            .settings-modal .modal-content {
+                min-height: 82vh;
+                border-radius: 20px 20px 0 0;
+                border-bottom: none;
+                max-height: 90vh;
+                display: flex;
+                flex-direction: column;
+            }
+            .settings-modal .modal-header {
+                padding: 16px 20px 8px;
+                flex-shrink: 0;
+            }
+            .settings-modal .modal-title {
+                font-size: 1.15rem;
+            }
+            .settings-modal .modal-body {
+                flex-direction: column;
+                height: auto;
+                flex: 1;
+                overflow-y: auto;
+            }
+            .settings-sidebar {
+                width: 100% !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border);
+                padding: 4px 16px 8px;
+                display: flex;
+                overflow-x: auto;
+                gap: 6px;
+                flex-shrink: 0;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .settings-sidebar::-webkit-scrollbar {
+                display: none;
+            }
+            .settings-nav-item {
+                white-space: nowrap;
+                padding: 7px 14px;
+                margin-bottom: 0;
+                font-size: 0.82rem;
+                border-radius: 20px;
+                background: transparent;
+                transition: background-color 0.2s, color 0.2s;
+            }
+            .settings-nav-item.active {
+                background-color: var(--bg-secondary);
+                color: var(--text-primary);
+            }
+            .settings-nav-item i {
+                margin-right: 5px;
+                font-size: 0.9rem;
+            }
+            .settings-content-area {
+                width: 100% !important;
+                padding: 16px 20px;
+                overflow-y: auto;
+                flex: 1;
+            }
+            .setting-row {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 14px 0;
+            }
+            .setting-label {
+                font-size: 0.9rem;
+            }
+            .setting-desc {
+                max-width: 60%;
+                font-size: 0.75rem;
+            }
+            .theme-selector {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .theme-card {
+                min-width: 75px;
+                padding: 10px;
+            }
+            .theme-card i {
+                font-size: 1.2rem;
+                margin-bottom: 4px;
+            }
+            .theme-card span {
+                font-size: 0.75rem;
+            }
+
+            /* === APP MODAL === */
+            .app-modal .modal-dialog {
+                margin: 10px;
+                max-width: calc(100% - 20px);
+            }
+
+            /* === DISCLAIMER === */
+            .disclaimer {
+                font-size: 0.65rem !important;
+                padding: 4px 10px !important;
+            }
+
+            /* === SIDEBAR BRAND === */
+            .sidebar-brand {
+                padding: 8px 6px 6px;
+            }
+            .sidebar-brand .brand-logo {
+                width: 28px;
+                height: 28px;
+                font-size: 0.85rem;
+            }
+            .sidebar-brand .brand-text {
+                font-size: 0.88rem;
+            }
+            .sidebar-close-btn {
+                display: block;
             }
         }
+
+        /* Small phones */
+        @media (max-width: 400px) {
+            .chat-header .header-title {
+                font-size: 0.78rem;
+                max-width: 45%;
+            }
+            .chat-header .share-btn {
+                font-size: 0.75rem;
+            }
+            .message-content-wrapper {
+                max-width: 95% !important;
+            }
+            .input-wrapper {
+                padding: 8px 12px;
+                border-radius: 20px;
+            }
+            .settings-modal .modal-body {
+                max-height: 60vh;
+            }
+        }
+
         @media (min-width: 769px) {
             .sidebar.closed ~ .main-content {
                 margin-left: 0;
@@ -640,25 +1011,349 @@
             color: var(--text-primary);
             font-size: 0.85rem; /* Match sidebar font */
         }
+
+        /* ------------------------------------------- */
+        /* START: Settings Modal Styles (DeepSeek Inspired) */
+        /* ------------------------------------------- */
+        .settings-modal {
+            z-index: 1200 !important;
+        }
+        .settings-modal + .modal-backdrop {
+            z-index: 1150 !important;
+        }
+        .settings-modal .modal-content {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 16px;
+            overflow: hidden;
+            min-height: 500px;
+        }
+        .settings-modal .modal-header {
+            border-bottom: none;
+            padding: 16px 24px;
+        }
+        .settings-modal .modal-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .settings-modal .btn-close {
+            filter: invert(1) grayscale(100%); /* Make 'X' white */
+            opacity: 0.7;
+        }
+        .light-theme .settings-modal .btn-close {
+            filter: none;
+        }
+        .settings-modal .modal-body {
+            padding: 0;
+            display: flex;
+            height: 450px; /* Fixed height for scrollable areas */
+        }
+        /* Settings Sidebar */
+        .settings-sidebar {
+            width: 30%;
+            background-color: transparent;
+            padding: 10px 16px;
+            border-right: none;
+        }
+        .settings-nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .settings-nav-item i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+        .settings-nav-item:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .settings-nav-item.active {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        /* Settings Content */
+        .settings-content-area {
+            width: 70%;
+            padding: 20px 32px;
+            overflow-y: auto;
+        }
+        .settings-section {
+            display: none; /* Hidden by default */
+        }
+        .settings-section.active {
+            display: block;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+        .setting-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .setting-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            max-width: 400px;
+        }
+        .setting-value {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        /* Theme Selection Cards */
+        .theme-selector {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .theme-card {
+            flex: 1;
+            background-color: var(--bg-secondary);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .theme-card i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .theme-card span {
+            font-size: 0.85rem;
+        }
+        /* UPDATED: Uses theme-aware CSS variable */
+        .theme-card:hover {
+            background-color: var(--theme-selection-bg);
+        }
+        /* UPDATED: Uses theme-aware CSS variable */
+        .theme-card.active {
+            border-color: var(--text-primary); /* Highlight border */
+            background-color: var(--theme-selection-bg);
+        }
+        /* Outline Buttons (Red/Standard) */
+        .btn-outline-custom {
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 20px;
+            padding: 4px 16px;
+            font-size: 0.85rem;
+            background: transparent;
+        }
+        .btn-outline-custom:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .btn-outline-danger-custom {
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+            border-radius: 20px;
+            padding: 4px 16px;
+            font-size: 0.85rem;
+            background: transparent;
+        }
+        .btn-outline-danger-custom:hover {
+            background-color: rgba(245, 108, 108, 0.1);
+            color: var(--danger-color);
+        }
+        /* Custom Select */
+        .settings-select {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 6px;
+            padding: 6px 12px;
+            outline: none;
+            cursor: pointer;
+        }
+        /* Export Box */
+        .export-box {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .export-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .export-link {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+        /* Scrollbar for modal content */
+        .settings-content-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        .settings-content-area::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 3px;
+        }
+        /* App Modal Styles */
+        .app-modal {
+            z-index: 1300 !important; /* Ensure modals are above the sidebar (z-index 1100) on mobile */
+        }
+        .app-modal .modal-content {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 16px;
+        }
+        .app-modal .btn-close {
+            filter: invert(1) grayscale(100%);
+            opacity: 0.7;
+        }
+        .light-theme .app-modal .btn-close {
+            filter: none;
+        }
+        .app-modal .modal-header {
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+        }
+        .app-modal .modal-footer {
+            border-top: 1px solid var(--border);
+            padding: 12px 24px;
+        }
+        .app-modal .modal-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .sidebar-section-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            padding: 8px 8px 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        @keyframes toastSlideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        /* Shared Links View Overrides */
+        #sharedLinksView {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        #sharedLinksView .modal-body {
+            display: block !important;
+            padding: 8px 24px !important;
+            height: auto !important;
+        }
+        #sharedLinksList {
+            gap: 0 !important;
+        }
     </style>
 </head>
 <body class="dark-theme">
     <div class="app-container">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <div class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">M</div>
+                <div>
+                    <div class="brand-text">MedRec</div>
+                    <div class="brand-subtitle">Medicine Recommendation Chatbot</div>
+                </div>
+                <button class="sidebar-close-btn" id="sidebar-close-mobile"><i class="bi bi-chevron-double-left"></i></button>
+            </div>
             <button class="new-chat-btn"><i class="bi bi-plus-circle me-2"></i>New chat</button>
             <div class="position-relative">
                 <input type="text" class="chat-search form-control" placeholder="Search chats...">
                 <i class="bi bi-search chat-search-icon"></i>
             </div>
-            <div class="chat-list">
-                <div class="chat-item active"><i class="bi bi-chat-left-dots"></i>Medicine Recommendations</div>
-                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Side Effects Query</div>
-                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Dosage Instructions</div>
-                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Generic Names</div>
-                <div class="chat-item"><i class="bi bi-chat-left-dots"></i>Drug Interactions</div>
+            <div class="chat-list" id="chat-list">
+                <div class="chat-item active">
+                    <div class="chat-text"><i class="bi bi-chat-left-dots"></i>Medicine Recommendations</div>
+                    <div class="dropdown chat-options">
+                        <i class="bi bi-three-dots-vertical chat-options-btn" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                        <ul class="dropdown-menu dropdown-menu-custom">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pencil"></i> Rename</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pin-angle"></i> Pin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-share"></i> Share</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-text"><i class="bi bi-chat-left-dots"></i>Side Effects Query</div>
+                    <div class="dropdown chat-options">
+                        <i class="bi bi-three-dots-vertical chat-options-btn" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                        <ul class="dropdown-menu dropdown-menu-custom">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pencil"></i> Rename</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pin-angle"></i> Pin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-share"></i> Share</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-text"><i class="bi bi-chat-left-dots"></i>Dosage Instructions</div>
+                    <div class="dropdown chat-options">
+                        <i class="bi bi-three-dots-vertical chat-options-btn" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                        <ul class="dropdown-menu dropdown-menu-custom">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pencil"></i> Rename</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pin-angle"></i> Pin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-share"></i> Share</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-text"><i class="bi bi-chat-left-dots"></i>Generic Names</div>
+                    <div class="dropdown chat-options">
+                        <i class="bi bi-three-dots-vertical chat-options-btn" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                        <ul class="dropdown-menu dropdown-menu-custom">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pencil"></i> Rename</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pin-angle"></i> Pin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-share"></i> Share</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-text"><i class="bi bi-chat-left-dots"></i>Drug Interactions</div>
+                    <div class="dropdown chat-options">
+                        <i class="bi bi-three-dots-vertical chat-options-btn" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                        <ul class="dropdown-menu dropdown-menu-custom">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pencil"></i> Rename</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pin-angle"></i> Pin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-share"></i> Share</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <div class="sidebar-footer">
-                <div class="sidebar-item"><i class="bi bi-gear"></i>Settings</div>
+                <div class="sidebar-item" id="settings-btn"><i class="bi bi-gear"></i>Settings</div>
                 <div class="sidebar-item">
                     <i class="bi bi-moon-stars"></i>Toggle Theme
                     <span class="ms-auto">
@@ -670,20 +1365,18 @@
                     <i class="bi bi-box-arrow-right"></i> Logout
                 </div>
                 <div class="user-profile">
-                    <div class="user-avatar">U</div>
-                    <span>User Name</span>
+                    <div class="user-avatar">{{ user.first_name|default:user.username|first|upper }}</div>
+                    <span>{{ user.first_name|default:user.username }}</span>
                     <span class="upgrade-btn"><i class="bi bi-stars"></i> Upgrade</span>
                 </div>
             </div>
         </div>
         <div class="main-content">
             <div class="chat-header">
-                <!-- Sidebar Toggle Button (Hamburger) -->
                 <span class="sidebar-toggle" id="sidebar-toggle-open"><i class="bi bi-list"></i></span>
                 <span class="sidebar-toggle show" id="sidebar-toggle-close" style="display: none;"><i class="bi bi-chevron-double-left"></i></span>
-                <div class="logo">M</div>
-                MedRec: Medicine Recommendation Chatbot
-                <span class="share-btn"><i class="bi bi-upload fs-5"></i> Share</span>
+                <span class="header-title" id="chat-header-title">New Chat</span>
+                <span class="share-btn"><i class="bi bi-reply-fill fs-5" style="transform: scaleX(-1); display: inline-block;"></i><span class="d-none d-md-inline"> Share</span></span>
             </div>
             <div class="chat-history" id="chat-history">
                 <div class="message bot-message">
@@ -727,20 +1420,67 @@
                             <label class="form-check-label" for="dualResponseToggle">Dual Response</label>
                         </div>
                         <div class="dropdown model-select ms-3">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="modelDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                gemini 2.5 flash
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill" type="button" id="modelDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-selected-model="gemini-2.5-flash">
+                                Gemini 2.5 Flash
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="modelDropdown">
+                            <ul class="dropdown-menu" aria-labelledby="modelDropdown" style="max-height: 360px; overflow-y: auto;">
+                                <li><h6 class="dropdown-header">Generation 3.x</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-3.5-flash">
+                                        Gemini 3.5 Flash
+                                        <small class="text-muted d-block">Latest &amp; fastest</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-3.1-pro">
+                                        Gemini 3.1 Pro
+                                        <small class="text-muted d-block">Deep reasoning</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-3.1-flash-lite">
+                                        Gemini 3.1 Flash Lite
+                                        <small class="text-muted d-block">Lightweight &amp; efficient</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-3-flash">
+                                        Gemini 3 Flash
+                                        <small class="text-muted d-block">Fast general purpose</small>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Generation 2.5</h6></li>
                                 <li>
                                     <a class="dropdown-item" href="#" data-value="gemini-2.5-flash">
-                                        gemini 2.5 flash
+                                        Gemini 2.5 Flash
                                         <small class="text-muted d-block">Quick response</small>
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="#" data-value="gemini-2.5-pro">
-                                        gemini 2.5 pro
+                                        Gemini 2.5 Pro
                                         <small class="text-muted d-block">Think hard</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-2.5-flash-lite">
+                                        Gemini 2.5 Flash Lite
+                                        <small class="text-muted d-block">Lightweight &amp; fast</small>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Generation 2.0</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-2-flash">
+                                        Gemini 2 Flash
+                                        <small class="text-muted d-block">Stable &amp; reliable</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-value="gemini-2-flash-lite">
+                                        Gemini 2 Flash Lite
+                                        <small class="text-muted d-block">Minimal &amp; efficient</small>
                                     </a>
                                 </li>
                             </ul>
@@ -757,11 +1497,245 @@
             <div class="disclaimer"><i class="bi bi-exclamation-triangle"></i> MedRec can make mistakes. Check important info.</div>
         </div>
     </div>
+
+    <div class="modal fade settings-modal" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div id="settingsMainView">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Settings</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                    <div class="settings-sidebar">
+                        <div class="settings-nav-item active" data-target="general">
+                            <i class="bi bi-gear"></i> General
+                        </div>
+                        <div class="settings-nav-item" data-target="profile">
+                            <i class="bi bi-person"></i> Profile
+                        </div>
+                        <div class="settings-nav-item" data-target="data">
+                            <i class="bi bi-database"></i> Data
+                        </div>
+                        <div class="settings-nav-item" data-target="about">
+                            <i class="bi bi-file-text"></i> About
+                        </div>
+                    </div>
+                    <div class="settings-content-area">
+                        <div id="general" class="settings-section active">
+                            <div class="mb-4">
+                                <div class="setting-label">Theme</div>
+                                <div class="theme-selector">
+                                    <div class="theme-card" data-theme="light">
+                                        <i class="bi bi-sun"></i>
+                                        <span>Light</span>
+                                    </div>
+                                    <div class="theme-card" data-theme="dark">
+                                        <i class="bi bi-moon-stars"></i>
+                                        <span>Dark</span>
+                                    </div>
+                                    <div class="theme-card active" data-theme="system">
+                                        <i class="bi bi-display"></i>
+                                        <span>System</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Language</div>
+                                <select class="settings-select">
+                                    <option value="system" selected>System</option>
+                                    <option value="en">English</option>
+                                    <option value="bn">Bangla</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="profile" class="settings-section">
+                            <div class="setting-row">
+                                <div class="setting-label">Name</div>
+                                <div class="setting-value">abcd wxyz <i class="bi bi-google"></i></div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Email address</div>
+                                <div class="setting-value">wxy******50@gmail.com</div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Phone number</div>
+                                <div class="setting-value">-</div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Log out of all devices</div>
+                                <button class="btn btn-outline-danger-custom">Log out</button>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Delete account</div>
+                                <button class="btn btn-outline-danger-custom">Delete</button>
+                            </div>
+                        </div>
+
+                        <div id="data" class="settings-section">
+                            <div class="setting-row">
+                                <div>
+                                    <div class="setting-label">Improve the model for everyone</div>
+                                    <div class="setting-desc">Allow your content to be used to train our models and improve our services. We secure your data privacy.</div>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" checked>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Shared links</div>
+                                <button class="btn btn-outline-custom" id="manageSharedLinksBtn">Manage</button>
+                            </div>
+                            <div class="mt-3 pb-3 border-bottom border-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="setting-label">Export data</div>
+                                    <button class="btn btn-outline-custom"><i class="bi bi-download"></i> Download</button>
+                                </div>
+                                <div class="export-box">
+                                    <div class="export-info">
+                                        Exported on 2026-02-07 20:33, expires on 2026-02-14 20:33. <a href="#" class="export-link">Re-exporting</a> will update the download link.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-row mt-3">
+                                <div class="setting-label">Delete all chats</div>
+                                <button class="btn btn-outline-danger-custom delete-all-chats-btn">Delete all</button>
+                            </div>
+                        </div>
+
+                        <div id="about" class="settings-section">
+                            <div class="setting-row">
+                                <div class="setting-label">Terms of Use</div>
+                                <button class="btn btn-outline-custom">View</button>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-label">Privacy Policy</div>
+                                <button class="btn btn-outline-custom">View</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div> <!-- End settingsMainView -->
+                <!-- Shared Links View -->
+                <div id="sharedLinksView" style="display: none;">
+                    <div class="modal-header border-bottom-0 pb-2">
+                        <h5 class="modal-title d-flex align-items-center" style="font-size: 1.1rem; font-weight: 600;">
+                            <button class="btn btn-link text-decoration-none p-0 me-3" id="backToSettingsBtn" style="color: var(--text-primary);"><i class="bi bi-chevron-left"></i></button>
+                            Shared links
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body pt-2" style="max-height: 60vh; overflow-y: auto;">
+                        <div id="sharedLinksList" class="d-flex flex-column gap-3">
+                            <!-- Dynamically populated rows -->
+                        </div>
+                        <div id="noSharedLinksMsg" class="text-center text-secondary py-5" style="display: none;">
+                            No shared links yet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="modal fade app-modal" id="shareModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <!-- Step 1: Confirmation -->
+                <div id="shareStep1">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create public link</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="padding: 24px;">
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px;">Anyone with the link can view the conversation you’ve shared. Please check for sensitive or private content. You can manage shared links anytime in Settings &gt; Data.</p>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal" style="border-radius: 20px; padding: 6px 20px;">Cancel</button>
+                            <button type="button" class="btn" id="confirmCreateLinkBtn" style="background-color: var(--accent); color: #fff; border: none; border-radius: 20px; padding: 6px 20px;">Create link</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Step 2: Link Created -->
+                <div id="shareStep2" style="display: none;">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-link-45deg me-2"></i>Public link created</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="padding: 24px;">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="shareLink" readonly style="background-color: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary); font-size: 0.85rem;">
+                            <button class="btn" id="copyShareLink" style="background-color: var(--accent); color: #fff; border: none;"><i class="bi bi-clipboard me-1"></i>Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal fade app-modal" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2" style="color: var(--danger-color);"></i>Delete Chat</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 24px;">
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);">Are you sure you want to delete this chat? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn" id="confirmDeleteBtn" style="background-color: var(--danger-color); color: #fff; border: none; border-radius: 20px; padding: 6px 20px;">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete All Confirm Modal -->
+    <div class="modal fade app-modal" id="deleteAllConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1300;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2" style="color: var(--danger-color);"></i>Delete All Chats</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 24px;">
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);">Are you sure you want to delete ALL chats? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn" id="confirmDeleteAllBtn" style="background-color: var(--danger-color); color: #fff; border: none; border-radius: 20px; padding: 6px 20px;">Delete All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Shared Link Confirm Modal -->
+    <div class="modal fade app-modal" id="deleteSharedLinkConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1400;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header" style="border-bottom: none;">
+                    <h5 class="modal-title" style="font-weight: 600; font-size: 1.05rem;">Confirm deletion?</h5>
+                </div>
+                <div class="modal-body" style="padding: 0 24px 20px;">
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Once the link is deleted, no one can access the conversation through it.</p>
+                </div>
+                <div class="modal-footer" style="border-top: none; padding: 0 24px 20px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn" id="confirmDeleteSharedLinkBtn" style="background: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: 20px; padding: 6px 20px;">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-    <script>
+    <script src="{% static 'js/app.js' %}?v=3"></script>
+    <script type="text/x-disabled">
         $(document).ready(function() {
             // NEW: Helper function to update bot message view (for nav/regen)
             function updateBotMessageView($botMessage) {
@@ -941,9 +1915,25 @@
                 $initialBotMessage.data('userQuery', null); // Welcome message has no query
             }
             const initialChatHTML = $('#chat-history').html();
+            
             // New Chat button
+            // UPDATED: Include new structure for New Chat items with dropdowns
             $('.new-chat-btn').click(function() {
-                const newChatItem = $('<div class="chat-item active"><i class="bi bi-chat-left-dots"></i>New Chat</div>');
+                const newChatItemHTML = `
+                <div class="chat-item active">
+                    <div class="chat-text"><i class="bi bi-chat-left-dots"></i>New Chat</div>
+                    <div class="dropdown chat-options">
+                        <i class="bi bi-three-dots-vertical chat-options-btn" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                        <ul class="dropdown-menu dropdown-menu-custom">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pencil"></i> Rename</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-pin-angle"></i> Pin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-share"></i> Share</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>`;
+                const newChatItem = $(newChatItemHTML);
                 $('.chat-item').removeClass('active');
                 $('.chat-list').prepend(newChatItem);
                 $('#chat-history').html(initialChatHTML);
@@ -958,22 +1948,68 @@
                 }
                 scrollToBottom();
             });
+
             // Example buttons
             $(document).on('click', '.example-btn', function() {
                 const query = $(this).data('query');
                 $('#user-input').val(query);
                 $('#send-btn').click();
             });
-            // Theme toggle
+            // Theme toggle logic (Updated to work with Modal)
+            function setTheme(theme) {
+                if (theme === 'light') {
+                    $('body').removeClass('dark-theme').addClass('light-theme');
+                    $('#theme-toggle').html('<i class="bi bi-sun"></i>');
+                } else if (theme === 'dark') {
+                    $('body').removeClass('light-theme').addClass('dark-theme');
+                    $('#theme-toggle').html('<i class="bi bi-moon-stars"></i>');
+                } else {
+                    // System (default to dark for now as per base code)
+                    $('body').removeClass('light-theme').addClass('dark-theme');
+                    $('#theme-toggle').html('<i class="bi bi-moon-stars"></i>');
+                }
+            }
+
+            // Sidebar Theme Button (Toggle)
             $('#theme-toggle').click(function() {
                 if ($('body').hasClass('dark-theme')) {
-                    $('body').removeClass('dark-theme').addClass('light-theme');
-                    $(this).html('<i class="bi bi-sun"></i>');
+                    setTheme('light');
                 } else {
-                    $('body').removeClass('light-theme').addClass('dark-theme');
-                    $(this).html('<i class="bi bi-moon-stars"></i>');
+                    setTheme('dark');
                 }
             });
+
+            // === SETTINGS MODAL LOGIC ===
+            
+            // Open Modal
+            $('#settings-btn').click(function() {
+                var myModal = new bootstrap.Modal(document.getElementById('settingsModal'));
+                myModal.show();
+            });
+
+            // Tab Switching
+            $('.settings-nav-item').click(function() {
+                const target = $(this).data('target');
+                
+                // Update Nav
+                $('.settings-nav-item').removeClass('active');
+                $(this).addClass('active');
+
+                // Update Content
+                $('.settings-section').removeClass('active');
+                $('#' + target).addClass('active');
+            });
+
+            // Modal Theme Selection (Visual + Logic)
+            $('.theme-card').click(function() {
+                $('.theme-card').removeClass('active');
+                $(this).addClass('active');
+                const selectedTheme = $(this).data('theme');
+                setTheme(selectedTheme);
+            });
+
+            // === END SETTINGS MODAL LOGIC ===
+
             // === SIDEBAR TOGGLE FUNCTIONALITY (Desktop & Mobile) ===
             const $sidebar = $('.sidebar');
             const $mainContent = $('.main-content');
@@ -1019,6 +2055,12 @@
                     }
                 }
             });
+            
+            // UPDATED: Prevent chat load when clicking the options menu or dropdown items
+            $(document).on('click', '.chat-options, .dropdown-item', function(e) {
+                e.stopPropagation();
+            });
+
             // Chat item click (simulate loading new chat)
             $(document).on('click', '.chat-item', function() {
                 $('.chat-item').removeClass('active');
@@ -1117,11 +2159,14 @@
             scrollToBottom();
             // NEW: Model selection handling
             $(document).on('click', '.dropdown-item', function(e) {
-                e.preventDefault();
-                const selectedText = $(this).clone().children().remove().end().text().trim(); // Get text without small
-                const selectedValue = $(this).data('value');
-                $('#modelDropdown').text(selectedText);
-                $('#modelDropdown').data('selected-model', selectedValue);
+                // Prevent default behavior but allow dropdowns inside chat items to work
+                if($(this).closest('.chat-options').length === 0) {
+                      e.preventDefault();
+                      const selectedText = $(this).clone().children().remove().end().text().trim(); // Get text without small
+                      const selectedValue = $(this).data('value');
+                      $('#modelDropdown').text(selectedText);
+                      $('#modelDropdown').data('selected-model', selectedValue);
+                }
             });
             // Voice input feature
             const micIcon = $('.input-icons .bi-mic').parent();

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Chat — MedRec</title>
+    <meta name="description" content="Shared conversation from MedRec — AI Medicine Recommendation Chatbot">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <style>
+        :root {
+            --bg-primary: #202123;
+            --bg-chat: #40414f;
+            --text-primary: #ffffff;
+            --text-secondary: #d1d5da;
+            --accent: #10a37f;
+            --border: #4d4d4f;
+            --bubble-user: #19c37d;
+            --bubble-bot: #444654;
+        }
+        body {
+            background-color: var(--bg-chat);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .shared-header {
+            background-color: var(--bg-primary);
+            padding: 16px 24px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .shared-header-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        .header-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+        .chat-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 16px 60px;
+        }
+        .chat-title {
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .user-message {
+            justify-content: flex-end;
+        }
+        .bot-message {
+            justify-content: flex-start;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin: 0 10px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .user-avatar-icon {
+            background-color: var(--bubble-user);
+        }
+        .bot-avatar-icon {
+            background-color: var(--accent);
+        }
+        .message-bubble {
+            padding: 12px 18px;
+            border-radius: 12px;
+            max-width: 80%;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .user-bubble {
+            background-color: var(--bubble-user);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-bubble {
+            background-color: var(--bubble-bot);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+        .bot-bubble p { margin-bottom: 8px; }
+        .bot-bubble p:last-child { margin-bottom: 0; }
+        .bot-bubble ul, .bot-bubble ol { padding-left: 20px; }
+        .bot-bubble code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+        .bot-bubble pre { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; overflow-x: auto; }
+        .bot-bubble pre code { background: none; padding: 0; }
+        .bot-bubble blockquote { border-left: 3px solid var(--accent); padding-left: 12px; margin-left: 0; color: var(--text-secondary); }
+        .bot-bubble hr { border-color: var(--border); margin: 16px 0; }
+        .shared-footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 20px;
+        }
+        .shared-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .shared-footer a:hover {
+            text-decoration: underline;
+        }
+        .error-container {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        .error-container i {
+            font-size: 3.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            display: block;
+        }
+        .error-container h4 {
+            margin-bottom: 8px;
+        }
+        .shared-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(16, 163, 127, 0.15);
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="shared-header">
+        <div class="shared-header-inner">
+            <span class="header-logo">M</span>
+            MedRec — Shared Conversation
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="chat-container">
+        <div class="error-container">
+            <i class="bi bi-exclamation-circle"></i>
+            <h4>{{ error }}</h4>
+            <p style="color: var(--text-secondary);">This shared link may be invalid or expired.</p>
+            <a href="/app/" style="color: var(--accent); text-decoration: none; font-weight: 500; margin-top: 16px; display: inline-block;">
+                <i class="bi bi-arrow-left"></i> Go to MedRec
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="chat-container">
+        <div style="text-align: center; margin-bottom: 28px;">
+            <div class="shared-badge"><i class="bi bi-share"></i> Shared conversation</div>
+            <h5 class="chat-title" style="margin-bottom: 0;">{{ session.title }}</h5>
+        </div>
+        <div id="shared-chat">
+            {% for msg in messages %}
+            <div class="message {% if msg.role == 'user' %}user-message{% else %}bot-message{% endif %}">
+                {% if msg.role == 'bot' %}
+                <div class="avatar bot-avatar-icon">M</div>
+                {% endif %}
+                <div class="message-bubble {% if msg.role == 'user' %}user-bubble{% else %}bot-bubble{% endif %}"
+                     {% if msg.role == 'bot' %}data-markdown="true"{% endif %}>{{ msg.content }}</div>
+                {% if msg.role == 'user' %}
+                <div class="avatar user-avatar-icon">U</div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="error-container">
+                <i class="bi bi-chat-left-dots"></i>
+                <h4>No messages in this conversation</h4>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="shared-footer">
+        <p><strong>MedRec</strong> — AI Medicine Recommendation Chatbot</p>
+        <p><a href="/app/">Try MedRec yourself →</a></p>
+        <p style="font-size: 0.75rem; margin-top: 8px;"><i class="bi bi-exclamation-triangle"></i> MedRec can make mistakes. Always consult a licensed doctor or pharmacist.</p>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>
+        // Render markdown for bot messages
+        document.querySelectorAll('.message-bubble[data-markdown="true"]').forEach(function(el) {
+            var rawText = el.textContent;
+            el.innerHTML = marked.parse(rawText);
+            el.querySelectorAll('pre code').forEach(function(block) {
+                hljs.highlightElement(block);
+            });
+        });
+    </script>
+</body>
+</html>
