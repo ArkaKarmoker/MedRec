@@ -208,4 +208,5 @@ __marimo__/
 
 # Custom ignored paths
 app/static/faiss_index/
+app/static/faiss_index_bge/
 data/

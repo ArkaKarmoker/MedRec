@@ -1,10 +1,11 @@
 django
 python-decouple
-pandas
-torch
-faiss-cpu
 google-generativeai
 llama-index-core
 llama-index-llms-google-genai
 llama-index-embeddings-huggingface
-llama-index-vector-stores-faiss
+llama-index-vector-stores-supabase
+psycopg2-binary
+gunicorn
+whitenoise
+dj-database-url
