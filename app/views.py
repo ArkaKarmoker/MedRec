@@ -36,7 +36,7 @@ def initialize_rag_pipeline():
         from llama_index.core.postprocessor import SimilarityPostprocessor
         from llama_index.core.prompts import PromptTemplate
         from llama_index.llms.google_genai import GoogleGenAI
-        from llama_index.embeddings.huggingface import HuggingFaceInferenceAPIEmbedding
+        from llama_index.embeddings.huggingface_api import HuggingFaceInferenceAPIEmbedding
         from llama_index.vector_stores.supabase import SupabaseVectorStore
 
         # === GEMINI LLM SETUP ===
