@@ -19,7 +19,8 @@
 - **⚡ Serverless & Lightweight:** Completely relies on cloud APIs (Hugging Face & Gemini) for ML operations, drastically reducing memory footprint and deployment costs.
 - **☁️ Cloud Vector Storage:** Uses Supabase `pgvector` for lighting-fast semantic search across ~114,000+ medical data chunks.
 - **💬 Dual-Response System:** Provides answers strictly from the verified medical knowledge base alongside a generalized AI response.
-- **🔒 Secure User Sessions:** Built with Django authentication. User chat histories are securely saved in a PostgreSQL database.
+- **🔒 Secure User Sessions:** Built with a Custom Django Authentication Model. Uses email-based login (no usernames) and securely saves chat histories in a PostgreSQL database.
+- **⚙️ Dynamic Admin Control:** Switch between LLM Providers (Gemini, OpenRouter, Groq) dynamically via the Django Admin panel using predefined dropdown choices.
 - **🚀 Production Ready:** Fully configured with `gunicorn`, `whitenoise`, and deployment scripts for seamless hosting on platforms like Render or Railway.
 
 ---
