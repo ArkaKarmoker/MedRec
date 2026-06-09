@@ -1,10 +1,10 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
 
 class ChatSession(models.Model):
     """Represents a single chat conversation for a user."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_sessions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_sessions')
     title = models.CharField(max_length=255, default='New Chat')
     is_pinned = models.BooleanField(default=False)
     share_id = models.CharField(max_length=36, null=True, blank=True, unique=True, db_index=True)
@@ -16,7 +16,7 @@ class ChatSession(models.Model):
         ordering = ['-is_pinned', '-updated_at']
 
     def __str__(self):
-        return f"{self.title} ({self.user.username})"
+        return f"{self.title} ({self.user.email})"
 
 
 class ChatMessage(models.Model):
@@ -40,7 +40,12 @@ class ChatMessage(models.Model):
 
 class LLMProvider(models.Model):
     """Represents an LLM Provider configuration."""
-    name = models.CharField(max_length=50, unique=True)
+    PROVIDER_CHOICES = [
+        ('Gemini', 'Gemini'),
+        ('OpenRouter', 'OpenRouter'),
+        ('Groq', 'Groq'),
+    ]
+    name = models.CharField(max_length=50, unique=True, choices=PROVIDER_CHOICES)
     is_active = models.BooleanField(default=True)
     order = models.IntegerField(default=0, help_text="Priority order (lower is higher priority)")
 

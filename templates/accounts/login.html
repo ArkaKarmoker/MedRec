@@ -281,7 +281,7 @@
     <div class="logo">MedRec</div>
     <div class="auth-card">
         <div class="region-note">
-            Only login via email, Google, or +88 phone number is supported in your region.
+            Only login via email or Google is supported in your region.
         </div>
 
         <div id="messages-container">
@@ -301,7 +301,7 @@
             {% csrf_token %}
             <div class="input-wrapper">
                 <i class="bi bi-envelope input-icon"></i>
-                <input type="text" name="username" placeholder="Phone number / email address" required>
+                <input type="email" name="email" placeholder="Email address" required>
             </div>
             <div class="input-wrapper">
                 <i class="bi bi-lock input-icon"></i>

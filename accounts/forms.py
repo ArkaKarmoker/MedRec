@@ -1,7 +1,9 @@
 # forms.py
 from django import forms
 from django.core.exceptions import ValidationError
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 # Input widget attributes (updated to Bootstrap classes)
 INPUT_FIELD_ATTRS = {
@@ -12,7 +14,6 @@ INPUT_FIELD_ATTRS = {
 class RegistrationForm(forms.Form):
     first_name = forms.CharField(max_length=255, widget=forms.TextInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'First Name'}))
     last_name = forms.CharField(max_length=255, widget=forms.TextInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Last Name'}))
-    username = forms.CharField(max_length=150, widget=forms.TextInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Username'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Email'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Password'}))
     password_confirm = forms.CharField(widget=forms.PasswordInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Confirm Password'}))

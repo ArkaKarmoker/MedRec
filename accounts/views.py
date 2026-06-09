@@ -1,7 +1,8 @@
 # views.py
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout, get_user_model
+
+User = get_user_model()
 from django.contrib import messages
 from .forms import RegistrationForm
 from .models import Profile
@@ -12,15 +13,13 @@ def register(request):
         if form.is_valid():
             first_name = form.cleaned_data['first_name']
             last_name = form.cleaned_data['last_name']
-            username = form.cleaned_data['username']
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-            if User.objects.filter(username=username).exists():
-                messages.error(request, 'Username already exists.')
-            elif User.objects.filter(email=email).exists():
+            
+            if User.objects.filter(email=email).exists():
                 messages.error(request, 'Email already exists.')
             else:
-                user = User.objects.create_user(username=username, email=email, password=password, first_name=first_name, last_name=last_name)
+                user = User.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
                 user.save()
                 # Create a Profile instance for the new user (adapted from attached)
                 Profile.objects.create(user=user)
@@ -34,9 +33,9 @@ def register(request):
 
 def user_login(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
+        email = request.POST.get('email')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request, username=email, password=password)
         if user is not None:
             login(request, user)
             messages.success(request, 'Login successful!')
