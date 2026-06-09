@@ -256,6 +256,54 @@
         .dropdown-menu-custom .dropdown-item.text-danger:hover {
             background-color: rgba(220, 53, 69, 0.1);
         }
+        
+        /* Model Selection Dropdown Theme Support */
+        .dropdown-menu-model {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .dropdown-menu-model .dropdown-item:not(.active) {
+            color: var(--text-primary);
+        }
+        .dropdown-menu-model .dropdown-item:not(.active):hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .dropdown-menu-model .dropdown-item.disabled {
+            color: var(--text-secondary) !important;
+            opacity: 0.6;
+        }
+        .dropdown-menu-model .dropdown-divider {
+            border-top-color: var(--border);
+        }
+        .dropdown-menu-model .dropdown-header {
+            color: var(--text-secondary);
+        }
+        .dropdown-menu-model .dropdown-item:not(.active) small {
+            color: var(--text-secondary) !important;
+        }
+        .dropdown-menu-model .dropdown-item.active {
+            color: white !important;
+        }
+        .dropdown-menu-model .dropdown-item.active small {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+        
+        /* Thin Scrollbar for Model Dropdown */
+        .dropdown-menu-model::-webkit-scrollbar {
+            width: 3px;
+        }
+        .dropdown-menu-model::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dropdown-menu-model::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 10px;
+        }
+        .dropdown-menu-model::-webkit-scrollbar-thumb:hover {
+            background-color: var(--text-secondary);
+        }
 
         .sidebar-footer {
             border-top: 1px solid var(--border);
@@ -1397,7 +1445,7 @@
                                 <button class="action-btn thumbs-down" data-bs-toggle="tooltip" data-bs-placement="top" title="Bad response"><i class="bi bi-hand-thumbs-down"></i></button>
                                 <button class="action-btn regenerate" disabled="" style="cursor: not-allowed;" data-bs-toggle="tooltip" data-bs-placement="top" title="Regenerate response"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
-                            <span class="model-name ms-auto">Gemini 2.5 Flash</span>
+                            <span class="model-name ms-auto">Auto</span>
                         </div>
                     </div>
                 </div>
@@ -1420,67 +1468,102 @@
                             <label class="form-check-label" for="dualResponseToggle">Dual Response</label>
                         </div>
                         <div class="dropdown model-select ms-3">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill" type="button" id="modelDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-selected-model="gemini-2.5-flash">
-                                Gemini 2.5 Flash
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill" type="button" id="modelDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-selected-model="auto">
+                                <i class="bi bi-lock-fill me-1"></i> Auto
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="modelDropdown" style="max-height: 360px; overflow-y: auto;">
+                            <ul class="dropdown-menu dropdown-menu-model" aria-labelledby="modelDropdown" style="max-height: 360px; overflow-y: auto;">
+                                <li>
+                                    <a class="dropdown-item active" href="#" data-value="auto" style="pointer-events: none;">
+                                        <i class="bi bi-check2 me-1"></i> Auto
+                                        <small class="d-block" style="opacity: 0.8;">Smart model fallback</small>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Generation 3.x</h6></li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-3.5-flash">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-3.5-flash">
                                         Gemini 3.5 Flash
-                                        <small class="text-muted d-block">Latest &amp; fastest</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Latest &amp; fastest</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-3.1-pro">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-3.1-pro">
                                         Gemini 3.1 Pro
-                                        <small class="text-muted d-block">Deep reasoning</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Deep reasoning</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-3.1-flash-lite">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-3.1-flash-lite">
                                         Gemini 3.1 Flash Lite
-                                        <small class="text-muted d-block">Lightweight &amp; efficient</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Lightweight &amp; efficient</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-3-flash">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-3-flash">
                                         Gemini 3 Flash
-                                        <small class="text-muted d-block">Fast general purpose</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Fast general purpose</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Generation 2.5</h6></li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-2.5-flash">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-2.5-flash">
                                         Gemini 2.5 Flash
-                                        <small class="text-muted d-block">Quick response</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Quick response</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-2.5-pro">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-2.5-pro">
                                         Gemini 2.5 Pro
-                                        <small class="text-muted d-block">Think hard</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Think hard</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-2.5-flash-lite">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-2.5-flash-lite">
                                         Gemini 2.5 Flash Lite
-                                        <small class="text-muted d-block">Lightweight &amp; fast</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Lightweight &amp; fast</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Generation 2.0</h6></li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-2-flash">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-2-flash">
                                         Gemini 2 Flash
-                                        <small class="text-muted d-block">Stable &amp; reliable</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Stable &amp; reliable</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" data-value="gemini-2-flash-lite">
+                                    <a class="dropdown-item disabled" href="#" data-value="gemini-2-flash-lite">
                                         Gemini 2 Flash Lite
-                                        <small class="text-muted d-block">Minimal &amp; efficient</small>
+                                        {% if provider_status.gemini %}<small class="text-muted d-block">Minimal &amp; efficient</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Groq</h6></li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" data-value="llama-3.3-70b-versatile">
+                                        Llama 3.3 70B
+                                        {% if provider_status.groq %}<small class="text-muted d-block">Versatile</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" data-value="qwen/qwen3-32b">
+                                        Qwen 3 32B
+                                        {% if provider_status.groq %}<small class="text-muted d-block">Fast &amp; Accurate</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" data-value="llama-3.1-8b-instant">
+                                        Llama 3.1 8B
+                                        {% if provider_status.groq %}<small class="text-muted d-block">Instant Response</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">OpenRouter</h6></li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" data-value="openrouter/free">
+                                        OpenRouter Auto
+                                        {% if provider_status.openrouter %}<small class="text-muted d-block">Best free model</small>{% else %}<small class="text-danger d-block">Not Available</small>{% endif %}
                                     </a>
                                 </li>
                             </ul>
@@ -1872,7 +1955,7 @@
                 $('#user-input').css('height', 'auto');
                 showLoading();
                 // Real Gemini API Call via Django Backend
-                const selectedModel = $('#modelDropdown').data('selected-model') || 'gemini-2.5-flash';
+                const selectedModel = $('#modelDropdown').data('selected-model') || 'auto';
                 $.ajax({
                     url: '/api/chat/', // Your Django endpoint
                     type: 'POST',
@@ -1910,7 +1993,7 @@
                 const initialParsedText = marked.parse(initialHtml.trim()); // Re-parse to be safe
                 $bubble.html(initialParsedText); // Set parsed HTML
                 $initialBotMessage.data('responses', [initialParsedText]);
-                $initialBotMessage.data('models', ['Gemini 2.5 Flash']);
+                $initialBotMessage.data('models', ['Auto']);
                 $initialBotMessage.data('currentIndex', 0);
                 $initialBotMessage.data('userQuery', null); // Welcome message has no query
             }
@@ -1942,7 +2025,7 @@
                 if ($welcomeMsg.length) {
                     const initialParsedText = $welcomeMsg.data('responses') ? $welcomeMsg.data('responses')[0] : marked.parse($welcomeMsg.find('.message-bubble').text().trim());
                     $welcomeMsg.data('responses', [initialParsedText]);
-                    $welcomeMsg.data('models', ['Gemini 2.5 Flash']);
+                    $welcomeMsg.data('models', ['Auto']);
                     $welcomeMsg.data('currentIndex', 0);
                     $welcomeMsg.data('userQuery', null);
                 }
@@ -2103,7 +2186,7 @@
                 $bubble.html('Thinking...');
                 $btn.prop('disabled', true);
                 // Real Gemini API Call via Django Backend
-                const selectedModel = $('#modelDropdown').data('selected-model') || 'gemini-2.5-flash';
+                const selectedModel = $('#modelDropdown').data('selected-model') || 'auto';
                 $.ajax({
                     url: '/api/chat/', // Your Django endpoint
                     type: 'POST',
@@ -2162,10 +2245,7 @@
                 // Prevent default behavior but allow dropdowns inside chat items to work
                 if($(this).closest('.chat-options').length === 0) {
                       e.preventDefault();
-                      const selectedText = $(this).clone().children().remove().end().text().trim(); // Get text without small
-                      const selectedValue = $(this).data('value');
-                      $('#modelDropdown').text(selectedText);
-                      $('#modelDropdown').data('selected-model', selectedValue);
+                      // Model selection locked to Auto
                 }
             });
             // Voice input feature

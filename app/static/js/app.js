@@ -39,7 +39,7 @@ $(document).ready(function() {
                         <button class="action-btn thumbs-down" data-bs-toggle="tooltip" data-bs-placement="top" title="Bad response"><i class="bi bi-hand-thumbs-down"></i></button>
                         <button class="action-btn regenerate" disabled style="cursor: not-allowed;" data-bs-toggle="tooltip" data-bs-placement="top" title="Regenerate response"><i class="bi bi-arrow-counterclockwise"></i></button>
                     </div>
-                    <span class="model-name ms-auto">Gemini 2.5 Flash</span>
+                    <span class="model-name ms-auto">Auto</span>
                 </div>
             </div>
         </div>
@@ -344,7 +344,7 @@ $(document).ready(function() {
         appendMessage('user', userQuery);
         showLoading();
 
-        var selectedModel = $('#modelDropdown').data('selected-model') || 'gemini-2.5-flash';
+        var selectedModel = $('#modelDropdown').data('selected-model') || 'auto';
 
         function doSend(sessionId) {
             $.ajax({
@@ -976,7 +976,7 @@ $(document).ready(function() {
         var originalBubbleHtml = $bubble.html();
         $bubble.html('Thinking...');
         $btn.prop('disabled', true);
-        var selectedModel = $('#modelDropdown').data('selected-model') || 'gemini-2.5-flash';
+        var selectedModel = $('#modelDropdown').data('selected-model') || 'auto';
         $.ajax({
             url: '/api/chat/',
             type: 'POST',
@@ -1041,10 +1041,7 @@ $(document).ready(function() {
     // ==============================
     $(document).on('click', '.model-select .dropdown-item', function(e) {
         e.preventDefault();
-        var selectedText = $(this).clone().children().remove().end().text().trim();
-        var selectedValue = $(this).data('value');
-        $('#modelDropdown').text(selectedText);
-        $('#modelDropdown').data('selected-model', selectedValue);
+        // Model selection locked to Auto
     });
 
     // ==============================

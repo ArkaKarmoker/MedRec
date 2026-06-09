@@ -9,7 +9,7 @@ import json
 import logging
 from django.conf import settings
 import uuid
-from .models import ChatSession, ChatMessage
+from .models import ChatSession, ChatMessage, LLMProvider
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -113,12 +113,91 @@ def initialize_rag_pipeline():
 initialize_rag_pipeline()
 
 
+import requests
+from llama_index.core.llms.custom import CustomLLM
+from llama_index.core.llms import CompletionResponse, LLMMetadata
+from llama_index.core.llms.callbacks import llm_completion_callback
+
+class SimpleGroqLLM(CustomLLM):
+    model: str
+    api_key: str
+    temperature: float = 0.7
+
+    @property
+    def metadata(self) -> LLMMetadata:
+        return LLMMetadata(model_name=self.model)
+
+    @llm_completion_callback()
+    def complete(self, prompt: str, **kwargs) -> CompletionResponse:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.temperature,
+            "max_tokens": 4096
+        }
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code != 200:
+            raise Exception(f"Groq API Error: {response.text}")
+        json_data = response.json()
+        result_text = json_data['choices'][0]['message']['content']
+        actual_model = json_data.get('model', self.model)
+        return CompletionResponse(text=result_text, additional_kwargs={'model_used': actual_model})
+
+    @llm_completion_callback()
+    def stream_complete(self, prompt: str, **kwargs):
+        res = self.complete(prompt, **kwargs)
+        yield CompletionResponse(text=res.text, delta=res.text)
+
+class SimpleOpenRouterLLM(CustomLLM):
+    model: str
+    api_key: str
+    temperature: float = 0.7
+
+    @property
+    def metadata(self) -> LLMMetadata:
+        return LLMMetadata(model_name=self.model)
+
+    @llm_completion_callback()
+    def complete(self, prompt: str, **kwargs) -> CompletionResponse:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://medrec.com",
+            "X-Title": "MedRec"
+        }
+        data = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.temperature
+        }
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code != 200:
+            raise Exception(f"OpenRouter API Error: {response.text}")
+        json_data = response.json()
+        result_text = json_data['choices'][0]['message']['content']
+        actual_model = json_data.get('model', self.model)
+        return CompletionResponse(text=result_text, additional_kwargs={'model_used': actual_model})
+
+    @llm_completion_callback()
+    def stream_complete(self, prompt: str, **kwargs):
+        res = self.complete(prompt, **kwargs)
+        yield CompletionResponse(text=res.text, delta=res.text)
+
+
 # === DJANGO VIEWS ===
 
 @login_required  # <-- ADDED: Requires login to access the UI
 def app(request):
     """Render chatbot UI"""
-    return render(request, 'app/app.html')
+    providers = LLMProvider.objects.all()
+    provider_status = {p.name.lower(): p.is_active for p in providers}
+    return render(request, 'app/app.html', {'provider_status': provider_status})
 
 
 @csrf_exempt
@@ -153,7 +232,7 @@ def gemini_chat(request):
             greeting_text = (
                 "Hello 👋! I'm **MedRec**, your medicine info assistant.\n"
                 "Ask about generics, side effects, dosage, etc.\n\n"
-                "> **⚠ Warning: Always consult a doctor before use.**"
+                "<small style='color: var(--text-secondary); font-size: 0.8rem;'><i>⚠ Warning: Always consult a doctor before use.</i></small>"
             )
             if session:
                 ChatMessage.objects.create(session=session, role='bot', content=greeting_text, model_name=selected_model)
@@ -166,37 +245,123 @@ def gemini_chat(request):
 
         # Dynamically set the LLM to the user-selected model for this request
         from llama_index.llms.google_genai import GoogleGenAI
-        gemini_api_key = config('GEMINI_API_KEY')
-        request_llm = GoogleGenAI(
-            model=selected_model,
-            api_key=gemini_api_key,
-            temperature=0.7,
-            max_tokens=4096
-        )
-        query_engine._response_synthesizer._llm = request_llm
+        
+        gemini_api_key = config('GEMINI_API_KEY', default='').strip()
+        groq_api_key = config('GROQ_API_KEY', default='').strip()
+        openrouter_api_key = config('OPENROUTER_API_KEY', default='').strip()
+        
+        fallback_models = [
+            ("Gemini", "gemini-2.5-flash"),
+            ("Gemini", "gemini-2.5-pro"),
+            ("Gemini", "gemini-2.5-flash-lite"),
+            ("Gemini", "gemini-1.5-flash"),
+            ("Gemini", "gemini-1.5-pro"),
+        ]
+        
+        groq_fallback_models = [
+            ("Groq", "llama-3.3-70b-versatile"),
+            ("Groq", "qwen/qwen3-32b"),
+            ("Groq", "llama-3.1-8b-instant"),
+        ]
+        
+        # If auto, construct the provider list from DB
+        models_to_try = []
+        if selected_model == 'auto':
+            active_providers = LLMProvider.objects.filter(is_active=True).order_by('order', 'name')
+            for provider in active_providers:
+                if provider.name.lower() == 'gemini':
+                    models_to_try.extend(fallback_models)
+                elif provider.name.lower() == 'openrouter':
+                    models_to_try.append(("OpenRouter", "openrouter/free"))
+                elif provider.name.lower() == 'groq':
+                    models_to_try.extend(groq_fallback_models)
+        else:
+            if selected_model == 'openrouter/free':
+                models_to_try = [("OpenRouter", selected_model)]
+            elif selected_model in [m[1] for m in groq_fallback_models]:
+                models_to_try = [("Groq", selected_model)]
+            else:
+                models_to_try = [("Gemini", selected_model)]
+            
+        if not models_to_try:
+            return JsonResponse({'error': 'No LLM providers are currently enabled.'}, status=503)
+        
+        rag_response = ""
+        gemini_response = ""
+        successful_model = ""
+        successful_provider = ""
+        
+        for provider_name, model_name in models_to_try:
+            try:
+                if provider_name == "Gemini":
+                    request_llm = GoogleGenAI(
+                        model=model_name,
+                        api_key=gemini_api_key,
+                        temperature=0.7,
+                        max_tokens=4096
+                    )
+                elif provider_name == "Groq":
+                    request_llm = SimpleGroqLLM(
+                        model=model_name,
+                        api_key=groq_api_key,
+                        temperature=0.7
+                    )
+                elif provider_name == "OpenRouter":
+                    request_llm = SimpleOpenRouterLLM(
+                        model=model_name,
+                        api_key=openrouter_api_key,
+                        temperature=0.7
+                    )
+                else:
+                    continue
 
-        rag_result = query_engine.query(user_query)
-        rag_response = str(rag_result).strip()
-        if not rag_response or "not found" in rag_response.lower():
-            rag_response = "No reliable info found. Try a specific brand/generic name."
+                query_engine._response_synthesizer._llm = request_llm
+        
+                rag_result = query_engine.query(user_query)
+                rag_response = str(rag_result).strip()
+                if not rag_response or "not found" in rag_response.lower():
+                    rag_response = "No reliable info found. Try a specific brand/generic name."
+        
+                if dual_response:
+                    gemini_result = request_llm.complete(user_query)
+                    gemini_response = str(gemini_result).strip()
+                    if hasattr(gemini_result, 'additional_kwargs') and 'model_used' in gemini_result.additional_kwargs:
+                        successful_model = gemini_result.additional_kwargs['model_used']
+                    else:
+                        successful_model = model_name
+                else:
+                    successful_model = model_name
+                
+                successful_provider = provider_name
+                break # Success! Break out of the loop
+            except Exception as e:
+                logger.warning(f"Provider {provider_name} Model {model_name} failed: {e}")
+                continue
+        else:
+            # Loop finished without breaking, meaning all models failed
+            logger.error("All available models failed.")
+            return JsonResponse({'error': 'Service unavailable due to API limits. Please try again later.'}, status=503)
+
+        # Format model name nicely for display
+        if successful_provider == "Gemini":
+            formatted_model_name = successful_model.replace('-', ' ').title() if successful_model else 'Unknown Model'
+            formatted_model_name = formatted_model_name.replace('Gemini', 'Gemini') # Title case already does this, but just to be sure
+        else:
+            formatted_model_name = f"{successful_provider} ({successful_model.replace('-', ' ').title()})" if successful_model else successful_provider
 
         if dual_response:
-            # Direct LLM call uses the same request_llm already created above
-            gemini_result = request_llm.complete(user_query)
-            gemini_response = str(gemini_result).strip()
-
             response_text = (
                 "**💊 MedRec Knowledge base:**\n\n" + rag_response +
-                "\n\n---\n\n**✨ " + selected_model + ":**\n\n" + gemini_response +
-                "\n\n> **⚠ Warning: Always consult a licensed doctor or pharmacist. - MedRec**"
+                "\n\n---\n\n**✨ " + formatted_model_name + ":**\n\n" + gemini_response +
+                "\n\n<small style='color: var(--text-secondary); font-size: 0.8rem;'><i>⚠ Warning: Always consult a licensed doctor or pharmacist. - MedRec</i></small>"
             )
             if session:
-                ChatMessage.objects.create(session=session, role='bot', content=response_text, model_name=selected_model)
+                ChatMessage.objects.create(session=session, role='bot', content=response_text, model_name=successful_model)
                 _auto_title_session(session, user_query)
-            return JsonResponse({'response': response_text, 'model': selected_model, 'dual_response': True,
+            return JsonResponse({'response': response_text, 'model': successful_model, 'dual_response': True,
                 'session_id': session.id if session else None, 'title': session.title if session else None})
         else:
-            response_text = "**💊 MedRec Knowledge base:**\n\n" + rag_response + "\n\n> **⚠ Warning: Always consult a licensed doctor or pharmacist. - MedRec**"
+            response_text = "**💊 MedRec Knowledge base:**\n\n" + rag_response + "\n\n<small style='color: var(--text-secondary); font-size: 0.8rem;'><i>⚠ Warning: Always consult a licensed doctor or pharmacist. - MedRec</i></small>"
             if session:
                 ChatMessage.objects.create(session=session, role='bot', content=response_text, model_name='MedRec KB')
                 _auto_title_session(session, user_query)

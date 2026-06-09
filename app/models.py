@@ -36,3 +36,16 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:50]}"
+
+
+class LLMProvider(models.Model):
+    """Represents an LLM Provider configuration."""
+    name = models.CharField(max_length=50, unique=True)
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0, help_text="Priority order (lower is higher priority)")
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name

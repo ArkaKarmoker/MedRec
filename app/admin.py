@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ChatSession, ChatMessage
+from .models import ChatSession, ChatMessage, LLMProvider
 
 
 class ChatMessageInline(admin.TabularInline):
@@ -24,3 +24,10 @@ class ChatMessageAdmin(admin.ModelAdmin):
     def content_preview(self, obj):
         return obj.content[:80] + '...' if len(obj.content) > 80 else obj.content
     content_preview.short_description = 'Content'
+
+
+@admin.register(LLMProvider)
+class LLMProviderAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'order')
+    list_editable = ('is_active', 'order')
+    ordering = ('order', 'name')
