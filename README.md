@@ -35,6 +35,26 @@
 
 ---
 
+## 📂 Project Structure
+
+```text
+MedRec/
+├── accounts/               # Django app for user authentication
+├── app/                    # Main Django app handling chatbot and RAG logic
+│   ├── static/             # CSS, JS, and local FAISS vector indices
+│   └── views.py            # Chatbot API endpoints and LLM fallback logic
+├── data/                   # Directory for storing raw medicine CSV datasets
+├── MedRec/                 # Django project settings and root configurations
+├── templates/              # HTML templates (accounts and chatbot UI)
+├── .env                    # Environment variables (API keys, DB URLs)
+├── build.sh                # Deployment build script for Render
+├── manage.py               # Django command-line utility
+├── requirements.txt        # Python dependencies
+└── upload_to_supabase.py   # One-time script for ingesting data to Supabase
+```
+
+---
+
 ## ⚙️ Prerequisites
 
 Before you begin, ensure you have the following API keys and URLs ready:
