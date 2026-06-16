@@ -25,3 +25,21 @@ class RegistrationForm(forms.Form):
         if password and password_confirm and password != password_confirm:
             raise ValidationError("Passwords do not match.")
         return cleaned_data
+
+class ForgotPasswordForm(forms.Form):
+    email = forms.EmailField(widget=forms.EmailInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Enter your email address'}))
+
+class VerifyOTPForm(forms.Form):
+    otp = forms.CharField(max_length=6, widget=forms.TextInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Enter 6-digit OTP', 'autocomplete': 'off'}))
+
+class ResetPasswordForm(forms.Form):
+    password = forms.CharField(widget=forms.PasswordInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'New Password'}))
+    password_confirm = forms.CharField(widget=forms.PasswordInput(attrs={**INPUT_FIELD_ATTRS, 'placeholder': 'Confirm New Password'}))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirm = cleaned_data.get('password_confirm')
+        if password and password_confirm and password != password_confirm:
+            raise ValidationError("Passwords do not match.")
+        return cleaned_data

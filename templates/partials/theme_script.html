@@ -1,0 +1,52 @@
+<script>
+    (function() {
+        // Read theme from localStorage
+        let theme = localStorage.getItem('theme');
+        
+        // Fallback to database preference if user is logged in
+        {% if user.is_authenticated and user.profile %}
+        const dbTheme = '{{ user.profile.theme_preference|default:"system" }}';
+        if (dbTheme && theme !== dbTheme) {
+            theme = dbTheme;
+            localStorage.setItem('theme', theme);
+        }
+        {% endif %}
+        
+        // If still no theme, default to system
+        if (!theme) theme = 'system';
+        
+        // Function to apply theme to documentElement (<html>)
+        function applyTheme(t) {
+            let isDark = true;
+            if (t === 'system') {
+                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            } else if (t === 'dark') {
+                isDark = true;
+            } else {
+                isDark = false;
+            }
+            
+            if (!isDark) {
+                document.documentElement.classList.add('light-theme');
+                document.documentElement.classList.remove('dark-theme');
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark-theme');
+                document.documentElement.classList.remove('light-theme');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        }
+        
+        // Apply immediately to prevent flicker
+        applyTheme(theme);
+        
+        // Listen for OS theme changes
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
+                if (localStorage.getItem('theme') === 'system') {
+                    applyTheme('system');
+                }
+            });
+        }
+    })();
+</script>

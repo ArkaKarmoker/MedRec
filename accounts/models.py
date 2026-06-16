@@ -39,7 +39,22 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 class Profile(models.Model):
+    THEME_CHOICES = [
+        ('light', 'Light'),
+        ('dark', 'Dark'),
+        ('system', 'System'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    theme_preference = models.CharField(max_length=10, choices=THEME_CHOICES, default='system')
 
     def __str__(self):
         return f"{self.user.email}'s Profile"
+
+class OTP(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"OTP for {self.user.email}"

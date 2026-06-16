@@ -1,9 +1,11 @@
 from django.db import models
 from django.conf import settings
+import uuid
 
 
 class ChatSession(models.Model):
     """Represents a single chat conversation for a user."""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_sessions')
     title = models.CharField(max_length=255, default='New Chat')
     is_pinned = models.BooleanField(default=False)

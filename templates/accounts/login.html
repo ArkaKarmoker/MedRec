@@ -1,3 +1,5 @@
+{% load socialaccount %}
+{% load static %}
 <!-- login.html -->
 <!DOCTYPE html>
 <html lang="en">
@@ -6,6 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Login - MedRec: Medicine Recommendation Chatbot</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -158,6 +162,8 @@
         .or-divider span {
             background-color: var(--bg-card);
             padding: 0 12px;
+            position: relative;
+            z-index: 1;
         }
         .btn-google {
             width: 100%;
@@ -275,10 +281,22 @@
         html {
             overflow-y: auto;
         }
+
+        .light-theme {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --bg-input: #e9ecef;
+            --text-primary: #202123;
+            --text-secondary: #6c757d;
+        }
     </style>
+    {% include "partials/theme_script.html" %}
 </head>
 <body>
-    <div class="logo">MedRec</div>
+    <div class="logo" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <img src="{% static 'images/logo.png' %}" alt="MedRec Logo" style="height: 40px; width: 40px; object-fit: contain;">
+        MedRec
+    </div>
     <div class="auth-card">
         <div class="region-note">
             Only login via email or Google is supported in your region.
@@ -317,16 +335,19 @@
         </form>
 
         <div class="auth-footer">
-            <a href="#">Forgot password?</a>
+            <a href="{% url 'forgot_password' %}">Forgot password?</a>
             <a href="{% url 'register' %}">Sign up</a>
         </div>
 
         <div class="or-divider"><span>OR</span></div>
 
-        <button class="btn-google">
-            <div class="google-logo"></div>
-            Sign in with Google
-        </button>
+        <form action="{% provider_login_url 'google' %}" method="post" style="width: 100%;">
+            {% csrf_token %}
+            <button type="submit" class="btn-google">
+                <div class="google-logo"></div>
+                Sign in with Google
+            </button>
+        </form>
     </div>
 
     <div class="page-footer">

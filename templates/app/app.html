@@ -5,8 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="description" content="MedRec - AI Medicine Recommendation">
     <title>MedRec: Medicine Recommendation Chatbot</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
     <style>
@@ -1066,6 +1071,26 @@
         .settings-modal {
             z-index: 1200 !important;
         }
+        /* Zoom-in animation for Settings Modal */
+        .settings-modal.fade .modal-dialog {
+            transform: scale(0.7);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .settings-modal.show .modal-dialog {
+            transform: scale(1);
+            opacity: 1;
+        }
+        /* Zoom-in animation for Share Modal */
+        .app-modal.fade .modal-dialog {
+            transform: scale(0.7);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .app-modal.show .modal-dialog {
+            transform: scale(1);
+            opacity: 1;
+        }
         .settings-modal + .modal-backdrop {
             z-index: 1150 !important;
         }
@@ -1315,13 +1340,14 @@
             gap: 0 !important;
         }
     </style>
+    {% include "partials/theme_script.html" %}
 </head>
-<body class="dark-theme">
+<body>
     <div class="app-container">
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <div class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-logo">M</div>
+                <div class="brand-logo" style="background: transparent; color: inherit; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;"><img src="{% static 'images/logo.png' %}" alt="MedRec Logo" style="width: 100%; height: 100%; object-fit: contain;"></div>
                 <div>
                     <div class="brand-text">MedRec</div>
                     <div class="brand-subtitle">Medicine Recommendation Chatbot</div>
@@ -1402,12 +1428,6 @@
             </div>
             <div class="sidebar-footer">
                 <div class="sidebar-item" id="settings-btn"><i class="bi bi-gear"></i>Settings</div>
-                <div class="sidebar-item">
-                    <i class="bi bi-moon-stars"></i>Toggle Theme
-                    <span class="ms-auto">
-                        <button class="theme-toggle-btn" id="theme-toggle"><i class="bi bi-moon-stars"></i></button>
-                    </span>
-                </div>
                 <div class="sidebar-item"><i class="bi bi-question-circle"></i>Help</div>
                 <div class="sidebar-item" style="margin-top: 6px; cursor: pointer;" onclick="window.location.href='{% url 'logout' %}'">
                     <i class="bi bi-box-arrow-right"></i> Logout
@@ -1636,11 +1656,11 @@
                         <div id="profile" class="settings-section">
                             <div class="setting-row">
                                 <div class="setting-label">Name</div>
-                                <div class="setting-value">abcd wxyz <i class="bi bi-google"></i></div>
+                                <div class="setting-value">{{ user.first_name }} {{ user.last_name }} {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}</div>
                             </div>
                             <div class="setting-row">
                                 <div class="setting-label">Email address</div>
-                                <div class="setting-value">wxy******50@gmail.com</div>
+                                <div class="setting-value">{{ user.email }}</div>
                             </div>
                             <div class="setting-row">
                                 <div class="setting-label">Phone number</div>
@@ -1817,7 +1837,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-    <script src="{% static 'js/app.js' %}?v=3"></script>
+    <script src="{% static 'js/app.js' %}?v=7"></script>
     <script type="text/x-disabled">
         $(document).ready(function() {
             // NEW: Helper function to update bot message view (for nav/regen)
@@ -2038,29 +2058,87 @@
                 $('#user-input').val(query);
                 $('#send-btn').click();
             });
+            // Toast notification function
+            function showToast(message, type = 'success') {
+                const toastId = 'toast-' + Date.now();
+                const icon = type === 'success' ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill text-danger';
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center text-bg-dark border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+                      <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center">
+                          <i class="bi ${icon} me-2 fs-5"></i>
+                          <span>${message}</span>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                      </div>
+                    </div>
+                `;
+                
+                let container = $('#toast-container');
+                if (container.length === 0) {
+                    $('body').append('<div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000;"></div>');
+                    container = $('#toast-container');
+                }
+                
+                container.append(toastHtml);
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+                toast.show();
+                
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    $(toastElement).remove();
+                });
+            }
+
             // Theme toggle logic (Updated to work with Modal)
-            function setTheme(theme) {
+            function setTheme(theme, sync = false) {
+                localStorage.setItem('theme', theme);
+                
+                let isDark = true;
                 if (theme === 'light') {
-                    $('body').removeClass('dark-theme').addClass('light-theme');
-                    $('#theme-toggle').html('<i class="bi bi-sun"></i>');
+                    isDark = false;
                 } else if (theme === 'dark') {
-                    $('body').removeClass('light-theme').addClass('dark-theme');
-                    $('#theme-toggle').html('<i class="bi bi-moon-stars"></i>');
+                    isDark = true;
                 } else {
-                    // System (default to dark for now as per base code)
-                    $('body').removeClass('light-theme').addClass('dark-theme');
+                    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+
+                if (!isDark) {
+                    $('html, body').removeClass('dark-theme').addClass('light-theme');
+                    $('html').attr('data-bs-theme', 'light');
+                    $('#theme-toggle').html('<i class="bi bi-sun"></i>');
+                } else {
+                    $('html, body').removeClass('light-theme').addClass('dark-theme');
+                    $('html').attr('data-bs-theme', 'dark');
                     $('#theme-toggle').html('<i class="bi bi-moon-stars"></i>');
+                }
+
+                // Sync with backend only when explicitly requested
+                if (sync) {
+                    $.ajax({
+                        url: '/accounts/update-theme/',
+                        type: 'POST',
+                        data: JSON.stringify({ theme: theme }),
+                        contentType: 'application/json',
+                        success: function(response) { 
+                            if (response.status === 'success') {
+                                showToast('Theme updated successfully!');
+                            } else {
+                                showToast('Failed to update theme: ' + response.message, 'error');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            showToast('Error syncing theme.', 'error');
+                        }
+                    });
                 }
             }
 
-            // Sidebar Theme Button (Toggle)
-            $('#theme-toggle').click(function() {
-                if ($('body').hasClass('dark-theme')) {
-                    setTheme('light');
-                } else {
-                    setTheme('dark');
-                }
-            });
+            // Initialize Settings Modal Theme active state and ensure applied
+            const currentTheme = localStorage.getItem('theme') || 'system';
+            $('.theme-card').removeClass('active');
+            $('.theme-card[data-theme="' + currentTheme + '"]').addClass('active');
+            setTheme(currentTheme, false); // Do not sync on page load
 
             // === SETTINGS MODAL LOGIC ===
             
@@ -2083,12 +2161,13 @@
                 $('#' + target).addClass('active');
             });
 
-            // Modal Theme Selection (Visual + Logic)
-            $('.theme-card').click(function() {
+            // Modal Theme Selection (Visual + Logic) - Using event delegation for Bootstrap modal compatibility
+            $(document).on('click', '.theme-card', function() {
+                console.log('Theme card clicked:', $(this).data('theme'));
                 $('.theme-card').removeClass('active');
                 $(this).addClass('active');
                 const selectedTheme = $(this).data('theme');
-                setTheme(selectedTheme);
+                setTheme(selectedTheme, true); // Sync when user clicks
             });
 
             // === END SETTINGS MODAL LOGIC ===

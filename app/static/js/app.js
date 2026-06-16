@@ -276,19 +276,37 @@ $(document).ready(function() {
                     currentSessionId = null;
                     saveActiveSession(null);
                     showWelcomeScreen();
+                    history.replaceState(null, '', '/app/');
                     return;
                 }
+                
+                // URL parsing
+                var pathParts = window.location.pathname.split('/');
+                var urlSessionId = null;
+                if (pathParts.length >= 3 && pathParts[1] === 'app' && pathParts[2]) {
+                    urlSessionId = pathParts[2];
+                }
+
+                if (urlSessionId) {
+                    var foundUrl = sessions.some(function(s) { return String(s.id) === String(urlSessionId); });
+                    if (foundUrl) {
+                        loadSession(urlSessionId);
+                        return;
+                    }
+                }
+
                 var savedId = getSavedSession();
                 // 'new_chat' means user was on the new-chat welcome screen
                 if (savedId === 'new_chat') {
                     currentSessionId = null;
                     showWelcomeScreen();
+                    history.replaceState(null, '', '/app/');
                     return;
                 }
                 // Check if saved session still exists
                 var found = savedId && sessions.some(function(s) { return String(s.id) === String(savedId); });
                 if (found) {
-                    loadSession(parseInt(savedId));
+                    loadSession(savedId);
                 } else {
                     // Fallback to most recent
                     loadSession(sessions[0].id);
@@ -304,6 +322,7 @@ $(document).ready(function() {
     function loadSession(sessionId) {
         currentSessionId = sessionId;
         saveActiveSession(sessionId);
+        history.pushState(null, '', '/app/' + sessionId + '/');
         // Update active state in sidebar
         $('.chat-item').removeClass('active');
         $('.chat-item[data-session-id="' + sessionId + '"]').addClass('active');
@@ -392,6 +411,7 @@ $(document).ready(function() {
                 success: function(data) {
                     currentSessionId = data.id;
                     saveActiveSession(data.id);
+                    history.pushState(null, '', '/app/' + data.id + '/');
                     refreshSidebar();
                     doSend(data.id);
                 },
@@ -439,6 +459,7 @@ $(document).ready(function() {
         $('.chat-item').removeClass('active');
         $('#chat-header-title').text('New Chat');
         showWelcomeScreen();
+        history.pushState(null, '', '/app/');
     });
 
     // Example buttons
@@ -734,24 +755,64 @@ $(document).ready(function() {
     // ==============================
     // === THEME TOGGLE ===
     // ==============================
-    function setTheme(theme) {
+    function setTheme(theme, sync) {
+        sync = sync || false;
+        localStorage.setItem('theme', theme);
+
+        var isDark = true;
         if (theme === 'light') {
-            $('body').removeClass('dark-theme').addClass('light-theme');
-            $('#theme-toggle').html('<i class="bi bi-sun"></i>');
+            isDark = false;
         } else if (theme === 'dark') {
-            $('body').removeClass('light-theme').addClass('dark-theme');
-            $('#theme-toggle').html('<i class="bi bi-moon-stars"></i>');
+            isDark = true;
         } else {
-            $('body').removeClass('light-theme').addClass('dark-theme');
+            // system
+            isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+
+        if (!isDark) {
+            $('html, body').removeClass('dark-theme').addClass('light-theme');
+            $('html').attr('data-bs-theme', 'light');
+            $('#theme-toggle').html('<i class="bi bi-sun"></i>');
+        } else {
+            $('html, body').removeClass('light-theme').addClass('dark-theme');
+            $('html').attr('data-bs-theme', 'dark');
             $('#theme-toggle').html('<i class="bi bi-moon-stars"></i>');
+        }
+
+        // Sync with backend only when explicitly requested (user click)
+        if (sync) {
+            $.ajax({
+                url: '/accounts/update-theme/',
+                type: 'POST',
+                data: JSON.stringify({ theme: theme }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showToast('Theme updated to ' + theme.charAt(0).toUpperCase() + theme.slice(1));
+                    } else {
+                        showToast('Failed to save theme preference', 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error saving theme preference', 'error');
+                }
+            });
         }
     }
 
+    // Initialize theme from localStorage on page load
+    var savedTheme = localStorage.getItem('theme') || 'system';
+    setTheme(savedTheme, false);
+
+    // Update theme-card active state to match saved theme
+    $('.theme-card').removeClass('active');
+    $('.theme-card[data-theme="' + savedTheme + '"]').addClass('active');
+
     $('#theme-toggle').click(function() {
         if ($('body').hasClass('dark-theme')) {
-            setTheme('light');
+            setTheme('light', true);
         } else {
-            setTheme('dark');
+            setTheme('dark', true);
         }
     });
 
@@ -771,12 +832,12 @@ $(document).ready(function() {
         $('#' + target).addClass('active');
     });
 
-    // Modal Theme Selection
-    $('.theme-card').click(function() {
+    // Modal Theme Selection — using event delegation for Bootstrap modal compatibility
+    $(document).on('click', '.theme-card', function() {
         $('.theme-card').removeClass('active');
         $(this).addClass('active');
         var selectedTheme = $(this).data('theme');
-        setTheme(selectedTheme);
+        setTheme(selectedTheme, true);
     });
 
     // ==============================

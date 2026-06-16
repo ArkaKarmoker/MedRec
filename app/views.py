@@ -193,11 +193,14 @@ class SimpleOpenRouterLLM(CustomLLM):
 # === DJANGO VIEWS ===
 
 @login_required  # <-- ADDED: Requires login to access the UI
-def app(request):
+def app(request, chat_uuid=None):
     """Render chatbot UI"""
     providers = LLMProvider.objects.all()
     provider_status = {p.name.lower(): p.is_active for p in providers}
-    return render(request, 'app/app.html', {'provider_status': provider_status})
+    context = {'provider_status': provider_status}
+    if chat_uuid:
+        context['active_chat_uuid'] = str(chat_uuid)
+    return render(request, 'app/app.html', context)
 
 
 @csrf_exempt
@@ -219,7 +222,7 @@ def gemini_chat(request):
         session = None
         if session_id:
             try:
-                session = ChatSession.objects.get(id=session_id, user=request.user)
+                session = ChatSession.objects.get(uuid=session_id, user=request.user)
             except ChatSession.DoesNotExist:
                 pass
 
@@ -238,7 +241,7 @@ def gemini_chat(request):
                 ChatMessage.objects.create(session=session, role='bot', content=greeting_text, model_name=selected_model)
                 _auto_title_session(session, user_query)
             return JsonResponse({'response': greeting_text, 'model': selected_model,
-                'session_id': session.id if session else None, 'title': session.title if session else None})
+                'session_id': str(session.uuid) if session else None, 'title': session.title if session else None})
 
         if query_engine is None:
             return JsonResponse({'error': 'RAG engine not ready'}, status=503)
@@ -359,14 +362,14 @@ def gemini_chat(request):
                 ChatMessage.objects.create(session=session, role='bot', content=response_text, model_name=successful_model)
                 _auto_title_session(session, user_query)
             return JsonResponse({'response': response_text, 'model': successful_model, 'dual_response': True,
-                'session_id': session.id if session else None, 'title': session.title if session else None})
+                'session_id': str(session.uuid) if session else None, 'title': session.title if session else None})
         else:
             response_text = "**💊 MedRec Knowledge base:**\n\n" + rag_response + "\n\n<small style='color: var(--text-secondary); font-size: 0.8rem;'><i>⚠ Warning: Always consult a licensed doctor or pharmacist. - MedRec</i></small>"
             if session:
                 ChatMessage.objects.create(session=session, role='bot', content=response_text, model_name='MedRec KB')
                 _auto_title_session(session, user_query)
             return JsonResponse({'response': response_text, 'model': 'MedRec KB', 'dual_response': False,
-                'session_id': session.id if session else None, 'title': session.title if session else None})
+                'session_id': str(session.uuid) if session else None, 'title': session.title if session else None})
     except Exception as e:
         logger.error(f"Chat error: {e}")
         return JsonResponse({'error': 'Service unavailable'}, status=500)
@@ -394,7 +397,7 @@ def list_sessions(request):
         return JsonResponse({'error': 'GET required'}, status=405)
     sessions = ChatSession.objects.filter(user=request.user).order_by('-is_pinned', '-updated_at')
     data = [{
-        'id': s.id,
+        'id': str(s.uuid),
         'title': s.title,
         'is_pinned': s.is_pinned,
         'updated_at': s.updated_at.isoformat(),
@@ -409,7 +412,7 @@ def create_session(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     session = ChatSession.objects.create(user=request.user)
-    return JsonResponse({'id': session.id, 'title': session.title})
+    return JsonResponse({'id': str(session.uuid), 'title': session.title})
 
 
 @csrf_exempt
@@ -419,7 +422,7 @@ def get_session(request, session_id):
     if request.method != 'GET':
         return JsonResponse({'error': 'GET required'}, status=405)
     try:
-        session = ChatSession.objects.get(id=session_id, user=request.user)
+        session = ChatSession.objects.get(uuid=session_id, user=request.user)
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
     messages = [{
@@ -429,7 +432,7 @@ def get_session(request, session_id):
         'created_at': m.created_at.isoformat(),
     } for m in session.messages.all()]
     return JsonResponse({
-        'id': session.id,
+        'id': str(session.uuid),
         'title': session.title,
         'is_pinned': session.is_pinned,
         'share_id': session.share_id,
@@ -444,7 +447,7 @@ def rename_session(request, session_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
-        session = ChatSession.objects.get(id=session_id, user=request.user)
+        session = ChatSession.objects.get(uuid=session_id, user=request.user)
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
     data = json.loads(request.body)
@@ -453,7 +456,7 @@ def rename_session(request, session_id):
         return JsonResponse({'error': 'Title required'}, status=400)
     session.title = title[:255]
     session.save(update_fields=['title'])
-    return JsonResponse({'id': session.id, 'title': session.title})
+    return JsonResponse({'id': str(session.uuid), 'title': session.title})
 
 
 @csrf_exempt
@@ -463,12 +466,12 @@ def toggle_pin_session(request, session_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
-        session = ChatSession.objects.get(id=session_id, user=request.user)
+        session = ChatSession.objects.get(uuid=session_id, user=request.user)
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
     session.is_pinned = not session.is_pinned
     session.save(update_fields=['is_pinned'])
-    return JsonResponse({'id': session.id, 'is_pinned': session.is_pinned})
+    return JsonResponse({'id': str(session.uuid), 'is_pinned': session.is_pinned})
 
 
 @csrf_exempt
@@ -476,7 +479,7 @@ def toggle_pin_session(request, session_id):
 def share_session(request, session_id):
     """Generate or return share link for a session. POST to create, DELETE to revoke."""
     try:
-        session = ChatSession.objects.get(id=session_id, user=request.user)
+        session = ChatSession.objects.get(uuid=session_id, user=request.user)
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
     
@@ -504,7 +507,7 @@ def delete_session(request, session_id):
     if request.method != 'DELETE':
         return JsonResponse({'error': 'DELETE required'}, status=405)
     try:
-        session = ChatSession.objects.get(id=session_id, user=request.user)
+        session = ChatSession.objects.get(uuid=session_id, user=request.user)
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
     session.delete()
@@ -530,7 +533,7 @@ def list_shared_links(request):
     links = []
     for s in sessions:
         links.append({
-            'id': s.id,
+            'id': str(s.uuid),
             'title': s.title,
             'share_id': s.share_id,
             'share_url': request.build_absolute_uri(f'/share/{s.share_id}/'),
